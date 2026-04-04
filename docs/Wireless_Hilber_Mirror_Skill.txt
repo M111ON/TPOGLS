@@ -1,0 +1,37 @@
+[AI Skill Profile: Wireless Hilbert Entanglement Architecture]
+Objective: Optimize data structures and execution pipelines by shifting complexity from code to geometry. Replace physical memory storage and sequential verification with mathematical derivation and geometric entanglement.
+
+Core Philosophy: "Wireless Hilbert"
+
+No Physical Paths: The path does not exist in memory. It is generated on-demand via equations.
+Entanglement over Storage: If you have the key + core, you can reconstruct all neighbors and paths. Without the key, it is just noise.
+Zero Wait Time: Verification happens on-the-fly through geometry, eliminating the "moment of wait" before atomic commits.
+1. Data Structure Compression (DiamondBlock 64B)
+Concept: A 64-unit (8x8) Hilbert curve on a 4-sided cubic/pyramid structure has 3 sides that mirror 1 unique side.
+
+Old Inefficient Model: Storing 4 exact copies (32B quad_mirror).
+New Compressed Model: Store 1 unique side + offset. The other 3 are derived.
+Memory Layout Transformation:
+
+core (8B): The actual data / Point A on Hilbert.
+invert (8B): Twin shadow entanglement (a == A / NOT(core)).
+smart_mirror (2B): Replaces 32B quad_mirror. Stores offset (1B) + axes (1B) to derive the 3 mirrors.
+mount_space (30B): Freed space! Used for Temporal Layer (shadow frame key, temporal offset, twin entanglement).
+honeycomb (16B): Reserved/Mount space.
+2. Execution Pipeline (The "Zero-Wait" Flow)
+Because data integrity is guaranteed by geometric entanglement, intermediate bottlenecks (hash, lookup, verify, store, fsync) are completely bypassed.
+
+The New Pipeline: [Data In] ➔ [Core + Key] ➔ [Atomic Rename] ➔ [Done]
+
+Under the Hood (Instantaneous / Free Compute):
+
+invert = NOT(core) (Free, no compute)
+3 mirrors = derive(offset) (Free, no storage)
+checksum = verified on-the-fly during write (Free)
+atomic rename = Executed immediately.
+3. Operational Directives for AI:
+When applying this skill to code or system design:
+
+Never store redundant mirrored data. Calculate it on-the-fly using core + offset.
+Do not build sequential verification steps. Use the checksum as a key to trigger the shadow frame permutation.
+Utilize the 30B freed space strictly for temporal rewinds or passive security layers, as the main pipeline no longer requires pending states.

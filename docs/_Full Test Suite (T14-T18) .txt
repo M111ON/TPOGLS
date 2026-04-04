@@ -1,0 +1,167 @@
+﻿=== Starting Full Test Suite (T14-T18) in /content/unified_all ===
+
+
+--- Building and Running stress_t14_gb.c ---
+=== T14: GB Streaming Carry Test ===
+PASS T14 GB streaming:
+     cells=16384 batches=1000 mini_batch=128 total=0.98 GB
+     dna_oneshot=8695869  dna_split=8695869  match=YES
+     ring_empty=1
+     oneshot 1.39s (720 MB/s)  split 1.37s (728 MB/s)
+
+
+1/1 passed
+
+
+
+
+========================================
+
+
+--- Building and Running stress_t15_writepath.c ---
+=== T15: End-to-End Write Path ===
+
+
+-- T15a: theta_map range + distribution --
+PASS T15a face range   (0..11, 10k samples)
+PASS T15a edge range   (0..4,  10k samples)
+PASS T15a face coverage (all 12 faces hit)
+PASS T15a edge coverage (all 5 edges hit)
+
+
+-- T15b: geo_route invariants --
+PASS T15b geo_route state=0 + bounds (1k)
+PASS T15b advance(0) = identity
+PASS T15b advance(60) bounds
+PASS T15b geo_route_pack face/edge/z
+
+
+-- T15c: DNA determinism --
+PASS T15c DNA determinism (same raw × 2)
+  dna=96
+
+
+-- T15d: write path isolation --
+PASS T15d isolation: different raw → different route_addr
+  route_addr_A=0x0000000820000000  route_addr_B=0x0000000010000000
+
+
+-- T15e: batch flow + dodeca dedup --
+PASS T15e dodeca has entries after 16 flows
+  total_dna=2530  dodeca_count=30  hit_count=2500  miss_count=30
+
+
+11/11 passed
+
+
+
+
+========================================
+
+
+--- Building and Running stress_t16_2gb.c ---
+=== T16: 2GB Streaming Carry Test ===
+PASS T14 GB streaming:
+     cells=65536 batches=500 mini_batch=128 total=1.95 GB
+     dna_oneshot=17908830  dna_split=17908830  match=YES
+     ring_empty=1
+     oneshot 4.08s (490 MB/s)  split 2.87s (698 MB/s)
+
+
+1/1 passed
+
+
+
+
+========================================
+
+
+--- Building and Running stress_t17_readpath.c ---
+=== T17: Read Path ===
+
+
+-- T17a: read_by_addr --
+PASS T17a read_by_addr: status != MISS
+PASS T17a read_by_addr: hop_count > 0
+PASS T17a read_by_addr: dna > 0 (write)
+  dna=96  merkle=0x0000000000000000  hops=1  status=0
+
+
+-- T17b: read_by_cell --
+PASS T17b write produced DNA
+PASS T17b found cell with honeycomb DNA
+PASS T17b read_by_cell: not MISS
+PASS T17b read_by_cell: merkle_root > 0
+  merkle=0x0000000824000000  hops=5  status=0
+
+
+-- T17c: READ_MISS --
+PASS T17c empty dodeca → READ_MISS
+PASS T17c wrong key → READ_MISS
+
+
+-- T17d: geo_read_scan --
+PASS T17d scan found > 0 cells
+PASS T17d scan == honeycomb DNA count
+  dna_writes=168  honey_dna=168  scan_found=168
+
+
+-- T17e: roundtrip --
+PASS T17e roundtrip: both found
+PASS T17e roundtrip: same merkle_root
+PASS T17e roundtrip: same hop_count
+  merkle=0x0000000000000000  hops=1
+
+
+14/14 passed
+
+
+
+
+========================================
+
+
+--- Building and Running stress_t18_hardening.c ---
+=== T18: Hardening + Fused Write Path ===
+
+
+-- T18a: Fix 1 sign-compare --
+PASS T18a spawn_pool_init: used=0
+PASS T18a spawn_pool_init: all BLUEPRINT
+PASS T18a spawn 17 cores (16 pool + 1 malloc)
+
+
+-- T18b: Fix 2 DiamondFlowCtxV2 alias --
+PASS T18b diamond_flow_init: route_addr=0
+PASS T18b diamond_flow_init: hop_count=0
+
+
+-- T18c: Fix 3 degenerate seed guard --
+PASS T18c guard(0,0) != 0
+PASS T18c guard(nonzero) passthrough
+PASS T18c guard(0, isect) != 0
+PASS T18c guard(0, isect) != guard(0,0)
+PASS T18c selftest pass
+
+
+-- T18d: Fix 4 fused write throughput --
+PASS T18d fused write: dna > 0
+PASS T18d fused write: no zero merkle
+  dna=19594  dodeca_count=144  47.22 ns/input  21.2 Minputs/s
+
+
+-- T18e: fused vs unfused DNA --
+PASS T18e fused dna > 0
+PASS T18e unfused dna > 0
+  fused_dna=203  unfused_dna=606  (may differ — different cell geometry)
+
+
+14/14 passed
+
+
+
+
+========================================
+
+
+=== Full Suite Execution Complete ===
