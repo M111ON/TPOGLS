@@ -1,0 +1,322 @@
+diff --git a/core/geo_pipeline_wire.h b/core/geo_pipeline_wire.h
+index 0680fa2f882d083770be1ce14407185845194fd5..11ed6b0a96f6459a50bbf915adb57e886f327d32 100644
+--- a/core/geo_pipeline_wire.h
++++ b/core/geo_pipeline_wire.h
+@@ -65,55 +65,61 @@ static inline void geo_pipeline_init(GeoPipeline *p, GeoSeed seed) {
+  * value     — data value (passed to GeoNet, reserved for routing)
+  * slot_hot  — ThirdEye heat signal (0 = normal)
+  * pkt_out   — filled GeoPacketWire ready for GPU
+  *
+  * Returns: 0=ok, 1=audit_fail (caller may geo_net_signal_fail)
+  */
+ static inline uint8_t geo_pipeline_step(
+     GeoPipeline   *p,
+     uint64_t       addr,
+     uint64_t       value,
+     uint8_t        slot_hot,
+     GeoPacketWire *pkt_out)
+ {
+     /* 1. GeoNet route */
+     GeoNetAddr a = geo_net_route(&p->gn, addr, value, slot_hot, p->seed);
+ 
+     /* 2. Radial Hilbert step */
+     RHStep rh = rh_step(&a);
+ 
+     /* 3. Fill packet (spoke + slot from geometry, not raw cidx) */
+     pkt_out->sig32 = (uint32_t)(a.slot ^ ((uint32_t)a.spoke << 9));
+     pkt_out->idx   = a.slot;
+     pkt_out->spoke = a.spoke;
+     pkt_out->phase = rh.line.group;   /* group as phase hint     */
+ 
+-    /* 4. Audit buffer accumulate */
++    /* 4. Audit buffer accumulate (bounded)
++     * NOTE:
++     *   rh.do_audit may not fire every 8 ops for every route pattern.
++     *   Keep pos bounded to avoid writing past audit.buf[8]. */
++    if (p->audit.pos >= GEO_GROUP_SIZE) {
++        _audit_buf_reset(&p->audit, a.spoke);
++    }
+     p->audit.buf[p->audit.pos++] = (uint8_t)(addr & 0xFFu);
+ 
+     uint8_t fail = 0;
+-    if (rh.do_audit) {
++    if (rh.do_audit || p->audit.pos == GEO_GROUP_SIZE) {
+         /* group boundary: XOR pair check */
+         RHAuditResult r = rh_audit_group(p->audit.buf, a.spoke, 0);
+         if (!r.ok) {
+             p->audit_fails++;
+             geo_net_signal_fail(&p->gn);   /* → ThirdEye hot++ */
+             fail = 1;
+         }
+         _audit_buf_reset(&p->audit, a.spoke);
+     }
+ 
+     p->total_ops++;
+     return fail;
+ }
+ 
+ /* ── Batch fill (replaces gpu_wire main loop) ────────────────────── */
+ /*
+  * Fills n packets from sequential addrs starting at addr_base.
+  * Returns count of audit failures.
+  */
+ static inline uint32_t geo_pipeline_fill(
+     GeoPipeline   *p,
+     GeoPacketWire *pkts,
+     uint32_t       n,
+     uint64_t       addr_base,
+     uint64_t       value,
+diff --git a/core/pogls_5world_core.h b/core/pogls_5world_core.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..84bd6899ea06fe4890b3a93c0c1cc32d7a6c1f84
+--- /dev/null
++++ b/core/pogls_5world_core.h
+@@ -0,0 +1,129 @@
++#ifndef POGLS_5WORLD_CORE_H
++#define POGLS_5WORLD_CORE_H
++
++#include <stdint.h>
++#include "pogls_fibo_addr.h"
++
++#define P5WORLD_XOR_FULL 0xFFFFFFFFFFFFFFFFULL
++
++typedef struct {
++    uint32_t addr_icosa;
++    uint32_t addr_dodeca;
++    uint32_t addr_fibo;
++    uint32_t addr_n_icosa;
++    uint32_t addr_n_dodeca;
++
++    uint64_t c_icosa;
++    uint64_t i_icosa;
++    uint64_t c_dodeca;
++    uint64_t i_dodeca;
++    uint64_t c_fibo;
++    uint64_t i_fibo;
++    uint64_t c_n_icosa;
++    uint64_t i_n_icosa;
++    uint64_t c_n_dodeca;
++    uint64_t i_n_dodeca;
++} P5WorldState;
++
++typedef struct {
++    uint8_t self_ok;
++    uint8_t neg_self_ok;
++    uint8_t dual_ok;
++    uint8_t neg_dual_ok;
++    uint8_t invert_cross_ok;
++    uint8_t aggregate_ok;
++    uint8_t all_required_ok;
++} P5WorldCheck;
++
++static inline uint64_t p5world_not64(uint64_t x)
++{
++    return ~x;
++}
++
++static inline uint32_t p5world_dual_map(uint32_t addr)
++{
++    return (uint32_t)(((addr << 10) | (addr >> 10)) & PHI_MASK);
++}
++
++static inline uint32_t p5world_invert_addr(uint32_t addr)
++{
++    return (uint32_t)(~addr) & PHI_MASK;
++}
++
++static inline uint8_t p5world_route_bit(uint32_t addr)
++{
++    return (uint8_t)(addr & 1u);
++}
++
++static inline uint32_t p5world_addr_fibo_scaled(uint32_t key, uint8_t level)
++{
++    uint32_t base = fibo_addr_a(key);
++    uint32_t shift = (level > 20u) ? 20u : level;
++    return base >> shift;
++}
++
++static inline P5WorldState p5world_build(uint32_t key,
++                                         uint8_t fibo_level,
++                                         uint64_t c_icosa,
++                                         uint64_t c_dodeca,
++                                         uint64_t c_fibo)
++{
++    P5WorldState s;
++
++    s.addr_icosa    = fibo_addr_a(key);
++    s.addr_dodeca   = p5world_dual_map(s.addr_icosa);
++    s.addr_fibo     = p5world_addr_fibo_scaled(key, fibo_level);
++    s.addr_n_icosa  = p5world_invert_addr(s.addr_icosa);
++    s.addr_n_dodeca = p5world_invert_addr(s.addr_dodeca);
++
++    s.c_icosa = c_icosa;
++    s.i_icosa = p5world_not64(c_icosa);
++
++    s.c_dodeca = c_dodeca;
++    s.i_dodeca = p5world_not64(c_dodeca);
++
++    s.c_fibo = c_fibo;
++    s.i_fibo = p5world_not64(c_fibo);
++
++    s.c_n_icosa = p5world_not64(s.c_icosa);
++    s.i_n_icosa = p5world_not64(s.i_icosa);
++
++    s.c_n_dodeca = p5world_not64(s.c_dodeca);
++    s.i_n_dodeca = p5world_not64(s.i_dodeca);
++
++    return s;
++}
++
++static inline P5WorldCheck p5world_verify(const P5WorldState *s)
++{
++    P5WorldCheck r;
++
++    r.self_ok =
++        ((s->c_icosa ^ s->i_icosa) == P5WORLD_XOR_FULL) &&
++        ((s->c_dodeca ^ s->i_dodeca) == P5WORLD_XOR_FULL) &&
++        ((s->c_fibo ^ s->i_fibo) == P5WORLD_XOR_FULL);
++
++    r.neg_self_ok =
++        ((s->c_n_icosa ^ s->i_n_icosa) == P5WORLD_XOR_FULL) &&
++        ((s->c_n_dodeca ^ s->i_n_dodeca) == P5WORLD_XOR_FULL);
++
++    r.dual_ok = (s->addr_dodeca == p5world_dual_map(s->addr_icosa));
++    r.neg_dual_ok = (s->addr_n_dodeca == p5world_invert_addr(s->addr_dodeca)) &&
++                    (s->addr_n_icosa == p5world_invert_addr(s->addr_icosa));
++
++    r.invert_cross_ok =
++        (s->c_n_icosa == p5world_not64(s->c_icosa)) &&
++        (s->i_n_icosa == p5world_not64(s->i_icosa)) &&
++        (s->c_n_dodeca == p5world_not64(s->c_dodeca)) &&
++        (s->i_n_dodeca == p5world_not64(s->i_dodeca));
++
++    r.aggregate_ok = ((s->c_icosa ^ s->c_dodeca ^ s->c_fibo ^
++                       s->c_n_icosa ^ s->c_n_dodeca) == 0ULL);
++
++    r.all_required_ok = r.self_ok && r.neg_self_ok && r.dual_ok &&
++                        r.neg_dual_ok && r.invert_cross_ok;
++
++    return r;
++}
++
++#endif
+diff --git a/core/pogls_qrpn_phaseE.h b/core/pogls_qrpn_phaseE.h
+index 681aa86ca4a8c793b625e267b1002bc5a4ae9569..21b6487311ecea04e213e7999f6b11f685ae1ed6 100644
+--- a/core/pogls_qrpn_phaseE.h
++++ b/core/pogls_qrpn_phaseE.h
+@@ -126,51 +126,56 @@ static inline uint32_t qrpn_phi_scatter_hex(uint64_t v)
+ {
+     /* bit-swap fold (เหมือน phi_scatter เดิม) */
+     v = ((v & 0xAAAAAAAAAAAAAAAAULL) >> 1)
+       | ((v & 0x5555555555555555ULL) << 1);
+     v ^= v >> 17;
+ 
+     /* แยก (x,y) จาก 64-bit → hex axial coordinates */
+     int q = (int)((v       & 0xFFFFu) * 2u / 3u);
+     int r = (int)((-(int)(v & 0xFFFFu) + 2*(int)((v >> 32) & 0xFFFFu)) / 3);
+ 
+     /* 6-rotation fold (60° axial: q,r → -r, q+r) ×6 = 360°
+      * NOTE: ห้ามใช้ XOR accumulate เพราะ 6 rotations เป็น closed group
+      *       XOR ทั้ง 6 steps cancel ออกเป็น 0 เสมอ (self-inverse property)
+      * FIX: asymmetric mix — multiply-add แต่ละ step ด้วย prime ต่างกัน */
+     uint32_t acc = 0;
+     int qi = q, ri = r;
+     uint32_t primes[6] = {73856093u, 19349663u, 83492791u,
+                           50331653u, 12582917u, 402653189u};
+     for (int i = 0; i < 6; i++) {
+         int nq = -ri;
+         int nr =  qi + ri;
+         qi = nq;
+         ri = nr;
+         /* asymmetric: rotate acc เพื่อทำลาย symmetry ก่อน XOR */
+         acc = (acc << 5) | (acc >> 27);   /* rotate32 left 5 */
+-        acc ^= (uint32_t)(qi * (int)primes[i]) + (uint32_t)(ri * (int)primes[(i+3)%6]);
++        /* UB-safe mix: do math in uint32_t domain (wrap is well-defined) */
++        uint32_t qi_u = (uint32_t)(int32_t)qi;
++        uint32_t ri_u = (uint32_t)(int32_t)ri;
++        uint32_t mix_q = qi_u * primes[i];
++        uint32_t mix_r = ri_u * primes[(i + 3) % 6];
++        acc ^= (mix_q + mix_r);
+     }
+ 
+     /* PHI_DOWN final fold — align กับ POGLS constants */
+     uint64_t out = (uint64_t)acc * POGLS_PHI_DOWN;
+     out ^= out >> 31;
+     out += POGLS_PHI_COMP;
+     out ^= out >> 23;
+ 
+     return qrpn_mix32(out);
+ }
+ 
+ 
+ /**
+  * qrpn_phi_scatter — original GPU independent path (keep for reference)
+  * Uses PHI_DOWN as scatter step (distinct from radial path).
+  * Phase E: replaced by qrpn_phi_scatter_hex() in GPU kernel.
+  */
+ static inline uint32_t qrpn_phi_scatter(uint64_t v)
+ {
+     /* Hilbert-inspired fold (bit reversal + XOR mix) */
+     v = ((v & 0xAAAAAAAAAAAAAAAAULL) >> 1)
+       | ((v & 0x5555555555555555ULL) << 1);
+     v ^= v >> 17;
+ 
+     /* PHI_DOWN scatter — from pogls_platform.h */
+diff --git a/test_5world_core.c b/test_5world_core.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..4a1a189adc177a42a86959a7ae1010fe8cc77048
+--- /dev/null
++++ b/test_5world_core.c
+@@ -0,0 +1,51 @@
++#include <stdio.h>
++#include <stdint.h>
++
++#include "core/pogls_5world_core.h"
++
++static int g_pass = 0;
++static int g_fail = 0;
++
++#define CHECK(label, cond) do { \
++    if (cond) { printf("  OK   %s\n", label); g_pass++; } \
++    else { printf("  FAIL %s\n", label); g_fail++; } \
++} while (0)
++
++int main(void)
++{
++    printf("=== POGLS 5-World Core Integrity Test ===\n");
++
++    P5WorldState s = p5world_build(
++        20260405u,
++        5u,
++        0x1122334455667788ULL,
++        0x8899AABBCCDDEEFFULL,
++        0x0ULL
++    );
++
++    P5WorldCheck ok = p5world_verify(&s);
++
++    printf("  route bit (0=icosa,1=dodeca): %u\n", p5world_route_bit(s.addr_icosa));
++    printf("  addr_icosa=0x%05x addr_dodeca=0x%05x addr_fibo=0x%05x\n",
++           s.addr_icosa, s.addr_dodeca, s.addr_fibo);
++
++    CHECK("required checks pass", ok.all_required_ok == 1u);
++    CHECK("optional aggregate xor==0 (when c_fibo==0)", ok.aggregate_ok == 1u);
++
++    P5WorldState agg_non_zero = s;
++    agg_non_zero.c_fibo = 0x99BBDDFF11335577ULL;
++    agg_non_zero.i_fibo = p5world_not64(agg_non_zero.c_fibo);
++    P5WorldCheck agg_non_zero_res = p5world_verify(&agg_non_zero);
++    CHECK("optional aggregate can be disabled by payload", agg_non_zero_res.aggregate_ok == 0u);
++
++    P5WorldState bad = s;
++    bad.addr_n_dodeca ^= 0x1u;
++    bad.i_n_icosa ^= 0x10u;
++
++    P5WorldCheck bad_res = p5world_verify(&bad);
++    CHECK("detect broken negative dual mapping", bad_res.neg_dual_ok == 0u);
++    CHECK("detect broken invert symmetry", bad_res.invert_cross_ok == 0u);
++
++    printf("\nResult: %d/%d passed\n", g_pass, g_pass + g_fail);
++    return (g_fail == 0) ? 0 : 1;
++}
