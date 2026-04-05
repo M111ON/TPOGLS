@@ -148,7 +148,12 @@ static inline uint32_t qrpn_phi_scatter_hex(uint64_t v)
         ri = nr;
         /* asymmetric: rotate acc เพื่อทำลาย symmetry ก่อน XOR */
         acc = (acc << 5) | (acc >> 27);   /* rotate32 left 5 */
-        acc ^= (uint32_t)(qi * (int)primes[i]) + (uint32_t)(ri * (int)primes[(i+3)%6]);
+        /* UB-safe mix: do math in uint32_t domain (wrap is well-defined) */
+        uint32_t qi_u = (uint32_t)(int32_t)qi;
+        uint32_t ri_u = (uint32_t)(int32_t)ri;
+        uint32_t mix_q = qi_u * primes[i];
+        uint32_t mix_r = ri_u * primes[(i + 3) % 6];
+        acc ^= (mix_q + mix_r);
     }
 
     /* PHI_DOWN final fold — align กับ POGLS constants */

@@ -87,11 +87,17 @@ static inline uint8_t geo_pipeline_step(
     pkt_out->spoke = a.spoke;
     pkt_out->phase = rh.line.group;   /* group as phase hint     */
 
-    /* 4. Audit buffer accumulate */
+     /* 4. Audit buffer accumulate (bounded)
+     * NOTE:
+     *   rh.do_audit may not fire every 8 ops for every route pattern.
+     *   Keep pos bounded to avoid writing past audit.buf[8]. */
+    if (p->audit.pos >= GEO_GROUP_SIZE) {
+        _audit_buf_reset(&p->audit, a.spoke);
+    }
     p->audit.buf[p->audit.pos++] = (uint8_t)(addr & 0xFFu);
 
     uint8_t fail = 0;
-    if (rh.do_audit) {
+    if (rh.do_audit || p->audit.pos == GEO_GROUP_SIZE) {
         /* group boundary: XOR pair check */
         RHAuditResult r = rh_audit_group(p->audit.buf, a.spoke, 0);
         if (!r.ok) {
