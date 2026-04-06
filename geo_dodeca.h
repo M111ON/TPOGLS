@@ -79,6 +79,8 @@ typedef struct {
     uint8_t  offset;        /* semantic distance จาก baseline      */
     uint16_t hop_count;     /* กี่ hops ใน flow นี้               */
     uint8_t  segment;       /* scroll ที่เท่าไหร่ (0-255)         */
+    uint16_t payload_id;    /* PayloadStore flat index (lane*144+slot) */
+    uint8_t  _pad;          /* reserved                            */
     uint32_t ref_count;     /* กี่ pointer ชี้มา (dedup counter)  */
 } DodecaEntry;
 
@@ -133,13 +135,15 @@ static inline DodecaResult dodeca_lookup(DodecaTable        *t,
     return DODECA_MISS;
 }
 
-static inline DodecaEntry *dodeca_insert(DodecaTable *t,
-                                          uint64_t     merkle_root,
-                                          uint64_t     sha256_hi,
-                                          uint64_t     sha256_lo,
-                                          uint8_t      offset,
-                                          uint16_t     hop_count,
-                                          uint8_t      segment)
+/* dodeca_insert_ex — full form with payload_id */
+static inline DodecaEntry *dodeca_insert_ex(DodecaTable *t,
+                                             uint64_t     merkle_root,
+                                             uint64_t     sha256_hi,
+                                             uint64_t     sha256_lo,
+                                             uint8_t      offset,
+                                             uint16_t     hop_count,
+                                             uint8_t      segment,
+                                             uint16_t     payload_id)
 {
     uint32_t idx = dodeca_slot(merkle_root);
     DodecaEntry *target = NULL;
@@ -159,10 +163,25 @@ static inline DodecaEntry *dodeca_insert(DodecaTable *t,
     target->offset      = offset;
     target->hop_count   = hop_count;
     target->segment     = segment;
+    target->payload_id  = payload_id;
+    target->_pad        = 0;
     target->ref_count   = 1;
 
     if (t->count < DODECA_TABLE_SIZE) t->count++;
     return target;
+}
+
+/* dodeca_insert — backward-compat wrapper (payload_id=0xFFFF=unwired) */
+static inline DodecaEntry *dodeca_insert(DodecaTable *t,
+                                          uint64_t     merkle_root,
+                                          uint64_t     sha256_hi,
+                                          uint64_t     sha256_lo,
+                                          uint8_t      offset,
+                                          uint16_t     hop_count,
+                                          uint8_t      segment)
+{
+    return dodeca_insert_ex(t, merkle_root, sha256_hi, sha256_lo,
+                            offset, hop_count, segment, 0xFFFFu);
 }
 
 /* ════════════════════════════════════════════════════════════════════

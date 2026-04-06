@@ -1,2 +1,8 @@
 zip
 patch1.txt
+*.Identifier
+*.exe
+.git
+TPOGLS-patched
+Unused
+docs

@@ -127,9 +127,22 @@ static inline FiboEvent twin_bridge_write(
     qrpn_orb_apply(&b->fibo, &res.pkt);
     if (res_out) res_out->pkt = res.pkt;
 
-    uint64_t isect = geo_fast_intersect(raw);
+    /* ── theta_map → core_raw → intersect (aligned with fused_write/geo_read) ──
+     * raw passes through theta_mix64 to extract face/edge geometry,
+     * then packed into core_raw before geo_fast_intersect.
+     * geo_read_by_raw mirrors this exact path for correct roundtrip. */
+    uint64_t h    = theta_mix64(raw);
+    uint32_t h_hi = (uint32_t)(h >> 32);
+    uint32_t h_lo = (uint32_t)(h & 0xFFFFFFFFu);
+    uint8_t  face = (uint8_t)(((uint64_t)h_hi * 12u) >> 32);
+    uint8_t  edge = (uint8_t)(((uint64_t)h_lo *  5u) >> 32);
+    uint64_t core_raw = ((uint64_t)face << 59)
+                      | ((uint64_t)edge << 52)
+                      | (raw & UINT64_C(0x000FFFFFFFFFFFFF));
 
-    if ((raw & 7u) == 0u)
+    uint64_t isect = geo_fast_intersect(core_raw);
+
+    if ((core_raw & 7u) == 0u)
         b->flow.drift_acc +=
             (uint32_t)__builtin_popcountll(b->baseline & ~isect);
 
