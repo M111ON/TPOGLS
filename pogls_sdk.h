@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "kv_bridge.h"
+#include <inttypes.h>
 
 /* ── L1 GeoCache (unchanged from S16) ──────────────────────────── */
 #define GEO_BUNDLE_WORDS  8          /* frozen */

@@ -15,6 +15,7 @@
 #define POGLS_SDK_SO_H
 
 #include <stdint.h>
+#include "pogls_stats_out.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +33,7 @@ POGLS_API int         pogls_so_has    (PoglsHandle h, uint64_t key);
 POGLS_API void        pogls_so_qrpn   (PoglsHandle h, uint64_t key, uint8_t failed);
 POGLS_API void        pogls_so_rewind (PoglsHandle h);
 POGLS_API void        pogls_so_stats  (PoglsHandle h);   /* prints to stdout */
+POGLS_API void        pogls_so_stats_out(PoglsHandle h, PoglsStatsOut *out); /* machine-readable */
 
 #ifdef __cplusplus
 }
