@@ -5,3 +5,9 @@ patch1.txt
 .git
 TPOGLS-patched
 docs
+fix_includes.sh
+POGLS_audit.zip
+POGLS_core.zip
+pogls_fix.sh
+POGLS_core_snapshot.zip
+TPOGLS_clean.zip
