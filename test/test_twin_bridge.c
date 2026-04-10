@@ -16,7 +16,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "geo_config.h"
+#include "../core/geo_config.h"
 #include "geo_thirdeye.h"
 #include "geo_fibo_clock.h"
 #include "geo_net.h"

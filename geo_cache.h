@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define GEO_LANES  6
-#define GEO_SLOTS  144
+#define GEO_CACHE_SLOTS  144
 #define GEO_WAYS   2
 #define GEO_VICTIM 8
 #define PHI64      0x9e3779b97f4a7c15ULL
@@ -20,7 +20,7 @@ typedef struct {
 } GeoEntry;
 
 typedef struct {
-    GeoEntry ways[GEO_SLOTS][GEO_WAYS];
+    GeoEntry ways[GEO_CACHE_SLOTS][GEO_WAYS];
     GeoEntry victim[GEO_VICTIM];
     uint8_t  vcount;
     uint32_t collisions;   /* per-window collision count */
@@ -41,7 +41,7 @@ static inline uint32_t geo_lane(uint64_t m) {
 }
 static inline uint32_t geo_slot(uint64_t m, uint64_t salt) {
     uint64_t h = m * (PHI64 ^ salt);
-    return (uint32_t)(h >> 32) % GEO_SLOTS; /* spread=8 vs >>56 spread=67 */
+    return (uint32_t)(h >> 32) % GEO_CACHE_SLOTS; /* spread=8 vs >>56 spread=67 */
 }
 
 /* ── clear ── */
@@ -121,10 +121,10 @@ static inline int geo_read(GeoCtx *ctx, uint64_t key, uint64_t *out) {
     return 0;
 }
 
-/* ── window swap every GEO_SLOTS writes ── */
+/* ── window swap every GEO_CACHE_SLOTS writes ── */
 static inline void geo_tick(GeoCtx *ctx) {
     ctx->write_seq++;
-    if (ctx->write_seq % GEO_SLOTS == 0) {
+    if (ctx->write_seq % GEO_CACHE_SLOTS == 0) {
         GeoCache tmp = ctx->B;
         ctx->B       = ctx->A;
         ctx->A       = tmp;

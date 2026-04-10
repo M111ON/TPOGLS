@@ -42,7 +42,7 @@
 #define GEO_WHE_H
 
 #include <stdint.h>
-#include "geo_config.h"    /* GEO_TE_CYCLE, GEO_SPOKES, etc. */
+#include "core/geo_config.h"    /* GEO_TE_CYCLE, GEO_SPOKES, etc. */
 #include "theta_map.h"     /* ThetaCoord                      */
 
 #ifdef __cplusplus

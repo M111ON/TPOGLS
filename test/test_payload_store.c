@@ -17,7 +17,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "geo_config.h"
+#include "../core/geo_config.h"
 #include "geo_payload_store.h"
 #include "geo_dodeca.h"
 

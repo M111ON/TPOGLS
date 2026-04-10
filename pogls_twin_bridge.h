@@ -29,7 +29,7 @@
 #endif
 
 /* POGLS core */
-#include "geo_config.h"
+#include "core/geo_config.h"
 #include "geo_fibo_clock.h"
 #include "pogls_pipeline_wire.h"
 

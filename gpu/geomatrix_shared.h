@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 /* ── Frozen constants (from geo_config.h) ── */
-#include "geo_config.h"
+#include "../core/geo_config.h"
 /* GEO_BUNDLE_WORDS = 8u  → geo_config.h  (do NOT redefine — was self-ref bug) */
 /* GEO_PHASE_COUNT  = 4u  → geo_config.h  (do NOT redefine — was self-ref bug) */
 /* GEO_HILBERT_N = GEO_SLOTS = 576        → geo_config.h                       */

@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "geo_config.h"
+#include "core/geo_config.h"
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 

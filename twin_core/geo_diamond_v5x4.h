@@ -1,3 +1,13 @@
+/* ============================================================
+ * LEGACY FILE — geo_diamond_v5x4.h (AVX2 path, pre-S21)
+ * DO NOT include alongside geo_diamond_field.h
+ * Use geo_fast_intersect_x4() via geo_diamond_field.h instead
+ * This file is kept for GPU/bench reference only.
+ * Define GEO_DIAMOND_V5X4_LEGACY to suppress this warning.
+ * ============================================================ */
+#ifndef GEO_DIAMOND_V5X4_LEGACY
+#pragma message("WARNING: geo_diamond_v5x4.h is a legacy intersect path. Use geo_diamond_field.h")
+#endif
 /*
  * geo_diamond_v5x4.h — SIMD x4 + SHA256 Integrity  [DEPRECATED — Session 20]
  * ============================================================================

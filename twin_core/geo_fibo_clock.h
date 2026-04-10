@@ -67,7 +67,8 @@ typedef struct {
 typedef struct {
     FiboDualCh   dual;
     FiboClockCtx clk;
-    uint64_t     prev_delta;  /* trend memory                           */
+    uint64_t     prev_delta;      /* trend memory (cumulative)           */
+    uint64_t     prev_window_inc; /* per-window increment for DRIFT      */
 
     /* [NEW] GeoSeed — 2 register, zero overhead vs old uint64_t sig   */
     GeoSeed      seed;        /* gen2=spatial channel, gen3=temporal    */
@@ -93,8 +94,9 @@ static inline void fibo_ctx_init(FiboCtx *ctx)
     ctx->clk.c144 = FIBO_PERIOD_FLUSH;
     ctx->clk.c720 = FIBO_PERIOD_SNAP;
 
-    ctx->prev_delta = 0;
-    ctx->prev_fx    = 0;
+    ctx->prev_delta      = 0;
+    ctx->prev_window_inc = 0;
+    ctx->prev_fx         = 0;
 
     /* zero GeoSeed — caller sets via fibo_ctx_set_seed() if needed */
     ctx->seed.gen2 = 0;
@@ -250,6 +252,9 @@ static inline FiboEvent fibo_clock_tick(FiboCtx *ctx, uint32_t fx)
 {
     FiboEvent ev = FIBO_EV_NONE;
 
+    /* accumulate dual channel every tick — DRIFT depends on this */
+    fibo_accum(&ctx->dual, fx);
+
     /* val_drift: popcount diff between consecutive fx (spatial drift signal) */
     uint32_t drift = (fx > ctx->prev_fx) ? (fx - ctx->prev_fx)
                                          : (ctx->prev_fx - fx);
@@ -267,17 +272,20 @@ static inline FiboEvent fibo_clock_tick(FiboCtx *ctx, uint32_t fx)
         }
     }
 
-    /* L1: DRIFT (trend-based) */
+    /* L1: DRIFT (trend-based) — per-window increment comparison */
     if (--ctx->clk.c72 == 0) {
         ctx->clk.c72 = FIBO_PERIOD_DRIFT;
 
-        uint64_t delta = ctx->dual.sum9 - ctx->dual.sum8;
+        uint64_t delta     = ctx->dual.sum9 - ctx->dual.sum8;
+        uint64_t increment = delta - ctx->prev_delta;  /* this window's net */
 
-        if (delta < ctx->prev_delta) {
+        /* DRIFT: this window contributed less than previous window */
+        if (ctx->prev_window_inc > 0 && increment < ctx->prev_window_inc) {
             ev |= FIBO_EV_DRIFT;
         }
 
-        ctx->prev_delta = delta;
+        ctx->prev_window_inc = increment;
+        ctx->prev_delta      = delta;
     }
 
     /* L2: FLUSH — co-fires with ThirdEye 144-cycle snap */
@@ -342,7 +350,6 @@ static inline FiboEvent fibo_hop(FiboCtx           *ctx,
                                   uint16_t            hop)
 {
     uint32_t fx = fibo_fx_full(b, hop);
-    fibo_accum(&ctx->dual, fx);
     return fibo_clock_tick(ctx, fx);
 }
 
@@ -350,7 +357,6 @@ static inline FiboEvent fibo_hop_fast(FiboCtx           *ctx,
                                        const DiamondBlock *b)
 {
     uint32_t fx = fibo_fx_fast(b);
-    fibo_accum(&ctx->dual, fx);
     return fibo_clock_tick(ctx, fx);
 }
 
