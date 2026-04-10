@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POGLS Real Audit — S10 → S38</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:      #07080a;
+    --s1:      #0d0f13;
+    --s2:      #131620;
+    --border:  #1c2030;
+    --b2:      #252a38;
+    --acc:     #e8ff47;   /* acid yellow */
+    --acc2:    #00d4ff;   /* cyan */
+    --red:     #ff3c5a;
+    --orange:  #ff8c00;
+    --green:   #00e09a;
+    --dim:     #3a4255;
+    --text:    #b8c4d8;
+    --th:      #5a6480;
+    --mono:    'IBM Plex Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --body:    'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 36px 28px;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  .hdr { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 36px; }
+  .hdr-top { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; }
+  .hdr h1 { font-family: var(--display); font-size: 52px; letter-spacing: 2px; color: var(--acc); line-height: 1; }
+  .hdr-sub { font-family: var(--display); font-size: 20px; color: var(--acc2); letter-spacing: 3px; margin-bottom: 2px; }
+  .hdr-meta { font-family: var(--mono); font-size: 11px; color: var(--th); }
+  .hdr-meta span { color: var(--text); margin: 0 6px; }
+
+  /* STAT ROW */
+  .stats { display: flex; gap: 1px; margin-bottom: 36px; border: 1px solid var(--border); overflow: hidden; border-radius: 3px; }
+  .stat { flex: 1; background: var(--s1); padding: 16px 14px; text-align: center; min-width: 90px; }
+  .stat .n { font-family: var(--display); font-size: 36px; line-height: 1; margin-bottom: 4px; }
+  .stat .l { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--th); }
+
+  /* SECTION */
+  .sec { margin-bottom: 40px; }
+  .sec-hdr {
+    font-family: var(--display);
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--th);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sec-hdr .n { background: var(--acc); color: #000; font-size: 11px; padding: 1px 6px; font-weight: 700; border-radius: 2px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+  th { text-align: left; padding: 7px 10px; background: #090b0f; color: var(--th); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 400; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,0.015); }
+
+  /* CHIP */
+  .chip { display: inline-block; background: #0a0d14; border: 1px solid var(--b2); padding: 1px 6px; border-radius: 2px; color: #7eb8d4; font-size: 11px; white-space: nowrap; }
+  .chip.new { border-color: rgba(0,212,255,0.3); color: var(--acc2); }
+  .chip.dropped { border-color: rgba(255,60,90,0.2); color: #ff6070; text-decoration: line-through; }
+  .chip.twin { border-color: rgba(232,255,71,0.25); color: var(--acc); }
+  .chip.gpu { border-color: rgba(255,140,0,0.3); color: var(--orange); }
+
+  /* BADGE */
+  .b { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 2px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+  .b-ok    { background: rgba(0,224,154,0.1); color: var(--green); border: 1px solid rgba(0,224,154,0.2); }
+  .b-new   { background: rgba(0,212,255,0.08); color: var(--acc2); border: 1px solid rgba(0,212,255,0.2); }
+  .b-sup   { background: rgba(255,140,0,0.08); color: var(--orange); border: 1px solid rgba(255,140,0,0.2); }
+  .b-drop  { background: rgba(255,60,90,0.08); color: var(--red); border: 1px solid rgba(255,60,90,0.2); }
+  .b-twin  { background: rgba(232,255,71,0.06); color: var(--acc); border: 1px solid rgba(232,255,71,0.15); }
+  .b-gpu   { background: rgba(255,140,0,0.08); color: var(--orange); border: 1px solid rgba(255,140,0,0.2); }
+  .b-warn  { background: rgba(255,60,90,0.12); color: #ff8090; border: 1px solid rgba(255,60,90,0.25); }
+
+  /* FINDING */
+  .findings { display: grid; gap: 10px; }
+  .f { background: var(--s1); border: 1px solid var(--border); padding: 16px 18px; border-radius: 3px; }
+  .f.crit  { border-left: 3px solid var(--red); }
+  .f.hi    { border-left: 3px solid var(--orange); }
+  .f.med   { border-left: 3px solid var(--acc2); }
+  .f.ok    { border-left: 3px solid var(--green); }
+  .f.twin  { border-left: 3px solid var(--acc); }
+  .f-head  { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .f-id    { font-family: var(--mono); font-size: 10px; color: var(--th); }
+  .f h3    { font-family: var(--body); font-size: 14px; font-weight: 500; color: #e0eaf8; }
+  .f p, .f li { font-size: 12px; color: var(--text); }
+  .f ul    { padding-left: 18px; margin-top: 4px; }
+  .f li    { margin-bottom: 3px; }
+  .act     { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 11px; color: var(--acc2); }
+  .act::before { content: "→ "; color: var(--acc); font-weight: 700; }
+
+  /* ARCH BOX */
+  .arch { background: #080a0e; border: 1px solid var(--border); padding: 20px 22px; border-radius: 3px; font-family: var(--mono); font-size: 11.5px; line-height: 2.1; color: var(--dim); overflow-x: auto; white-space: pre; }
+  .arch .hi  { color: var(--acc2); }
+  .arch .y   { color: var(--acc); }
+  .arch .g   { color: var(--green); }
+  .arch .r   { color: var(--red); }
+  .arch .or  { color: var(--orange); }
+  .arch .d   { color: var(--th); }
+
+  /* SESSION TIMELINE */
+  .timeline { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 28px; }
+  .tnode {
+    font-family: var(--mono); font-size: 10px;
+    padding: 5px 10px; border: 1px solid var(--border);
+    border-radius: 2px; background: var(--s1);
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 60px;
+  }
+  .tnode .sn { font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+  .tnode .sl { font-size: 9px; color: var(--th); text-align: center; line-height: 1.4; }
+  .tnode.active { border-color: var(--acc2); background: rgba(0,212,255,0.04); }
+  .tnode.active .sn { color: var(--acc2); }
+  .tnode.twin { border-color: rgba(232,255,71,0.3); background: rgba(232,255,71,0.03); }
+  .tnode.twin .sn { color: var(--acc); }
+  .tnode.gpu { border-color: rgba(255,140,0,0.3); }
+  .tnode.gpu .sn { color: var(--orange); }
+
+  /* 2-col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ACTION TABLE */
+  .pri-1 td:first-child { color: var(--red); font-weight: 700; }
+  .pri-2 td:first-child { color: var(--orange); font-weight: 700; }
+  .pri-3 td:first-child { color: var(--acc2); }
+  .pri-4 td:first-child { color: var(--th); }
+
+  .footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--th); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-sub">POGLS Architecture Audit</div>
+  <div class="hdr-top">
+    <h1>REAL STATE</h1>
+    <div>
+      <div style="font-family:var(--mono);font-size:13px;color:var(--acc2)">S10 → S38+ · From Source Files</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--th)">libpogls_v4.so confirmed present · twin_core/ · gpu/ · 170+ files</div>
+    </div>
+  </div>
+  <div class="hdr-meta">Scan: <span>2026-04-10</span> · Files: <span>~170</span> · Lines: <span>~50,000+</span> · Sources: <span>S10 zip + POGLS_core.zip (real)</span></div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="n" style="color:var(--acc2)">38+</div><div class="l">Sessions</div></div>
+  <div class="stat"><div class="n" style="color:var(--green)">170+</div><div class="l">Files</div></div>
+  <div class="stat"><div class="n" style="color:var(--acc)">6</div><div class="l">Layers</div></div>
+  <div class="stat"><div class="n" style="color:var(--orange)">15+</div><div class="l">GPU files</div></div>
+  <div class="stat"><div class="n" style="color:var(--acc)">1</div><div class="l">.so compiled</div></div>
+  <div class="stat"><div class="n" style="color:var(--red)">5</div><div class="l">Gaps found</div></div>
+  <div class="stat"><div class="n" style="color:var(--green)">3</div><div class="l">New subsystems</div></div>
+</div>
+
+<!-- SESSION TIMELINE -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">01</span>SESSION TIMELINE — CONFIRMED FROM FILES</div>
+  <div class="timeline">
+    <div class="tnode"><span class="sn">S1–S8</span><span class="sl">compress<br>scanner<br>stream</span></div>
+    <div class="tnode"><span class="sn">S9</span><span class="sl">.so API<br>REST<br>Docker</span></div>
+    <div class="tnode active"><span class="sn">S10</span><span class="sl">pipeline<br>17/17<br>tests ✓</span></div>
+    <div class="tnode active"><span class="sn">S11</span><span class="sl">te_batch<br>fibo_clock<br>l38_pack64</span></div>
+    <div class="tnode active"><span class="sn">S12</span><span class="sl">payload<br>12-Letter<br>Cube</span></div>
+    <div class="tnode active"><span class="sn">S13</span><span class="sl">dodeca<br>torus<br>BFS ✓</span></div>
+    <div class="tnode active"><span class="sn">S14</span><span class="sl">geo_pipeline<br>UnionMask<br>GeoCache</span></div>
+    <div class="tnode active"><span class="sn">S16</span><span class="sl">fibo_clock<br>GeoSeed<br>ThirdEye</span></div>
+    <div class="tnode active"><span class="sn">S17</span><span class="sl">GeoKV<br>geo_route<br>geo_read</span></div>
+    <div class="tnode active"><span class="sn">S18</span><span class="sl">KVBridge<br>FastAPI<br>rest_server</span></div>
+    <div class="tnode active"><span class="sn">S19</span><span class="sl">PoglsStatsOut<br>20-field<br>ctypes ✓</span></div>
+    <div class="tnode active"><span class="sn">S20</span><span class="sl">WHE master<br>geo_whe<br>pentagon</span></div>
+    <div class="tnode active"><span class="sn">S21</span><span class="sl">llm_hook<br>executor<br>lane_rebal</span></div>
+    <div class="tnode gpu"><span class="sn">S26</span><span class="sl">GeoPacket32<br>CUDA<br>kernel K6/K7</span></div>
+    <div class="tnode twin"><span class="sn">S29</span><span class="sl">wire_types<br>s29 GPU<br>multi-stream</span></div>
+    <div class="tnode twin"><span class="sn">twin</span><span class="sl">twin_core/<br>MirrorBlock<br>DiamondField</span></div>
+    <div class="tnode gpu" style="border-style:dashed"><span class="sn">S38</span><span class="sl">GiantShadow<br>HydraThin<br>Federation</span></div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE MAP -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">02</span>REAL ARCHITECTURE — 6 LAYERS</div>
+  <div class="arch"><span class="hi">┌─ Layer 6: Python API / REST ────────────────────────────────────────────────────┐</span>
+<span class="hi">│</span>  rest_server.py (FastAPI S18)  ←→  llm_advisor_v.py  ←→  pogls_cli.py          <span class="hi">│</span>
+<span class="hi">│</span>  pogls_engine.py (ctypes)  →  libpogls_v4.so  ←→  PoglsStatsOut (20 fields)     <span class="hi">│</span>
+<span class="hi">└────────────────────────────────────────────────────────────────────────────────┘</span>
+       ↕ <span class="r">OPEN GAP: _snap_from_ctx() ยังใช้ synthetic proxy ไม่ call .so</span>
+<span class="g">┌─ Layer 5: SDK / KV Bridge ──────────────────────────────────────────────────────┐</span>
+<span class="g">│</span>  pogls_sdk.h  →  PoglsCtx: GeoCache(L1) + KVBridge                             <span class="g">│</span>
+<span class="g">│</span>  KVBridge: GeoKV(CPU truth) + KVBLane×4 → GPU async ring                       <span class="g">│</span>
+<span class="g">│</span>  kv_bridge.h  kv_bridge_gpu.h  geo_kv.h  geo_kv_rehash.h                       <span class="g">│</span>
+<span class="g">└────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="y">┌─ Layer 4: Geo Pipeline (NEW vs S10) ────────────────────────────────────────────┐</span>
+<span class="y">│</span>  geo_pipeline.h (S14) = GeoCache(L1) + PayloadWired(L2) + UnionMask(Wolfram)   <span class="y">│</span>
+<span class="y">│</span>  geo_payload_store.h  (S12) = 12-Letter Cube × 6 spokes × 144 slots = 864      <span class="y">│</span>
+<span class="y">│</span>  geo_union_mask.h     (S14) = fold>=72→DANGER, >=36→NORMAL, <36→SAFE           <span class="y">│</span>
+<span class="y">│</span>  geo_fibo_clock.h     (S16) = GeoSeed dual-channel + ThirdEye co-fire @144     <span class="y">│</span>
+<span class="y">│</span>  geo_thirdeye.h       (S11+) = TE_CYCLE=144, 6 spokes, NORMAL/STRESSED/ANOMALY <span class="y">│</span>
+<span class="y">└────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="or">┌─ Layer 3: Geometry / Topology ─────────────────────────────────────────────────┐</span>
+<span class="or">│</span>  geo_config.h         = GEO_SLOTS=576, GEO_FULL_N=3456 [single source of truth] <span class="or">│</span>
+<span class="or">│</span>  geo_dodeca_torus.h   = g_map[12][5], BFS 12/12 ✓, orientable                  <span class="or">│</span>
+<span class="or">│</span>  geo_whe.h            = WHE S20 master: pentagon constraint, fingerprint 64-bit  <span class="or">│</span>
+<span class="or">│</span>  geo_route.h          = TorusNode routing                                        <span class="or">│</span>
+<span class="or">│</span>  geo_hardening_whe.h  = fused_write_batch 2.7×, WHE audit, 2 bugs fixed S19     <span class="or">│</span>
+<span class="or">└────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="d">┌─ Layer 2: Twin Geo (SEPARATE SUBSYSTEM — new) ──────────────────────────────────┐</span>
+<span class="d">│</span>  twin_core/: geo_diamond_field.h  ts_mirror.h  geo_diamond_v5x4.h [DEPRECATED]  <span class="d">│</span>
+<span class="d">│</span>  MirrorBlock = 10B read-view of DiamondBlock 64B = 6.4× cache density           <span class="d">│</span>
+<span class="d">│</span>  pogls_twin_bridge.h = POGLS ↔ Twin Geo shared bridge (S10.1 bundle fix)        <span class="d">│</span>
+<span class="d">└────────────────────────────────────────────────────────────────────────────────┘</span>
+<span class="r">┌─ Layer 1: GPU / Federation (POGLS38) ───────────────────────────────────────────┐</span>
+<span class="r">│</span>  bench2–bench10.cu   = throughput evolution (gpu/bench*.cu)                      <span class="r">│</span>
+<span class="r">│</span>  GeoPacket32 (S26)   = 8B canonical wire: sig32|hpos|phase|flags                <span class="r">│</span>
+<span class="r">│</span>  geomatrix_fused.cu  = K6/K7 warp-shuffle, no __syncthreads                    <span class="r">│</span>
+<span class="r">│</span>  GiantShadow38       = offline observer (Hydra→Detach→GiantShadow→ReflexBias)   <span class="r">│</span>
+<span class="r">│</span>  pogls_federation.h  = multi-node coordination                                   <span class="r">│</span>
+<span class="r">│</span>  geo_wire_types_s29.h = multi-stream async launch API                            <span class="r">│</span>
+<span class="r">└────────────────────────────────────────────────────────────────────────────────┘</span></div>
+</div>
+
+<!-- NEW SUBSYSTEMS -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">03</span>3 NEW SUBSYSTEMS — ไม่อยู่ใน MEMORY</div>
+  <div class="findings">
+
+    <div class="f twin">
+      <div class="f-head">
+        <span class="f-id">NS-01</span>
+        <h3>twin_core/ — Parallel Read-Optimized Geometry Layer</h3>
+        <span class="b b-twin">NEW</span>
+      </div>
+      <p>directory แยกต่างหาก 14 files ~4,364 lines — เป็น read-path สำหรับ DiamondBlock</p>
+      <ul>
+        <li><span class="chip twin">ts_mirror.h</span> — MirrorBlock 10B = DiamondBlock 64B compressed → 6.4× cache density บน read path, ไม่ persist เป็น primary</li>
+        <li><span class="chip twin">geo_diamond_field.h</span> (627 lines) — DiamondFlowCtx, pair invariant, drift_score, L0/L1 integrity gate</li>
+        <li><span class="chip twin">geo_diamond_v5x4.h</span> — AVX2 x4 path <strong>[DEPRECATED Session 20]</strong> — ใช้ fold_fibo_intersect แทน geo_fast_intersect → route_addr ต่างจาก geo_fused_write_batch</li>
+        <li><span class="chip twin">twin_core/geo_whe.h</span> (498 lines) — WHE Session 20+ master template ละเอียดกว่า top-level version</li>
+        <li><span class="chip twin">pogls_twin_bridge.h</span> — bridge POGLS ↔ twin geo, S10.1 bundle pointer fix (dangling pointer eliminated)</li>
+      </ul>
+      <div class="act">twin_core/ เป็น parallel read layer — ต้อง document ชัดว่า write path คือ geo_pipeline.h ไม่ใช่ twin_core</div>
+    </div>
+
+    <div class="f gpu">
+      <div class="f-head">
+        <span class="f-id">NS-02</span>
+        <h3>GPU / Federation Layer — POGLS38 (S26–S38+)</h3>
+        <span class="b b-gpu">S26–S38</span>
+      </div>
+      <p>gpu/ directory 40+ files รวม 10 bench iterations บอก evolution ชัดเจน</p>
+      <ul>
+        <li><span class="chip gpu">geo_wire_types_s29.h</span> — GeoPacket32 (8B), K6 iso_fused32, K7 warp-shuffle, multi-stream async API</li>
+        <li><span class="chip gpu">geomatrix_fused.cu</span> — fused kernel, warp-reduce, no __syncthreads (S26+)</li>
+        <li><span class="chip gpu">pogls38_giant_shadow.h</span> — GiantShadow38: GPU batch→L38HydraThin→ring→GiantShadow→ReflexBias feedback</li>
+        <li><span class="chip gpu">pogls_federation.h</span> — multi-node federation layer</li>
+        <li><span class="chip gpu">bench2_fixed → bench10.cu</span> — ชัดว่า GPU ถูก iterate อย่างน้อย 9 รอบ (bench2–bench10)</li>
+        <li>ไฟล์ S38 mentions 69 ครั้งใน codebase — เยอะที่สุดใน session markers ทั้งหมด</li>
+      </ul>
+      <div class="act">GPU layer ใช้งาน async เท่านั้น — CPU path ยัง canonical ตาม frozen rule</div>
+    </div>
+
+    <div class="f med">
+      <div class="f-head">
+        <span class="f-id">NS-03</span>
+        <h3>Hydra + Entangle + Exec Window (core/) — S14–S21</h3>
+        <span class="b b-new">CORE</span>
+      </div>
+      <p>core/ มีไฟล์ใหม่หลายตัวที่ memory ไม่ได้บันทึก:</p>
+      <ul>
+        <li><span class="chip new">pogls_exec_window.h</span> — batch 256 ops → 1 fsync ≈ 250× throughput vs per-write fsync</li>
+        <li><span class="chip new">pogls_entangle.h</span> — movement log 16B/entry, world flip A↔B on repair fail, RECYCLE flag</li>
+        <li><span class="chip new">pogls_detach_lane.h</span> + <span class="chip new">pogls_detach_eject.h</span> — DetachLane missing ใน S10, ทำให้ frontier.h ทำงานได้</li>
+        <li><span class="chip new">pogls_hydra_scheduler.h</span> — HydraScheduler async head lifecycle</li>
+        <li><span class="chip new">pogls_graph_topology.h</span> — missing dependency ของ frontier.h ใน S10 — อยู่ที่นี่แล้ว</li>
+        <li><span class="chip new">pogls_exec_window_lf.h</span> — lock-free variant ของ ExecWindow</li>
+      </ul>
+      <div class="act">pogls_detach_lane.h + pogls_graph_topology.h resolve S10 missing deps ทั้งหมด</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GAP ANALYSIS -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">04</span>GAP ANALYSIS — จากไฟล์จริง</div>
+  <div class="findings">
+
+    <div class="f crit">
+      <div class="f-head"><span class="f-id">G-01</span><h3>_snap_from_ctx() ยังเป็น Synthetic — ยืนยันจากไฟล์จริง</h3><span class="b b-warn">CONFIRMED OPEN</span></div>
+      <p>อ่านจาก <code>rest_server.py</code> โดยตรง — บรรทัด 132–143:</p>
+      <ul>
+        <li><code>load = min(100, int(rec.total_writes * 100 / BLOCK_SLOTS))</code> — เป็นการหาร writes / 5720 ไม่ใช่ GeoKV.count จริง</li>
+        <li><code>"tomb_pct": 0</code> — hardcode ศูนย์ตลอด</li>
+        <li><code>"overflow_pct": rec.total_encodes % 5</code> — synthetic mod 5</li>
+        <li><code>pogls_so_stats_out</code> ถูก wire ใน <code>pogls_engine.py</code> แล้ว แต่ <code>_snap_from_ctx()</code> ไม่ได้เรียกมัน</li>
+      </ul>
+      <div class="act">สร้าง <code>PoglsEngine</code> instance ชั่วคราวใน <code>_snap_from_ctx()</code> → call <code>stats_out()</code> → map fields</div>
+    </div>
+
+    <div class="f hi">
+      <div class="f-head"><span class="f-id">G-02</span><h3>geo_diamond_v5x4.h DEPRECATED ใน twin_core/ — ยังไม่มี replacement</h3><span class="b b-sup">DEPRECATED</span></div>
+      <p>ไฟล์มี header ชัดว่า <strong>"DEPRECATED — Session 20"</strong> และมี warning:</p>
+      <ul>
+        <li>AVX2 x4 path ใช้ <code>fold_fibo_intersect</code> ≠ <code>geo_fast_intersect</code></li>
+        <li><code>route_addr ต่างจาก geo_fused_write_batch</code> → inconsistency ถ้า mix paths</li>
+        <li>ยังอยู่ใน twin_core/ โดยไม่มีการ remove หรือ guard — อันตรายถ้า include โดยไม่รู้</li>
+      </ul>
+      <div class="act">เพิ่ม <code>#error "deprecated — use geo_hardening_whe.h"</code> หรือ remove จาก twin_core/</div>
+    </div>
+
+    <div class="f hi">
+      <div class="f-head"><span class="f-id">G-03</span><h3>pogls_api.h / pogls_stream.h / pogls_weight_stream.h — หายจาก top-level</h3><span class="b b-drop">MISSING</span></div>
+      <p>อยู่ใน S10 แต่ไม่มีใน POGLS_core.zip เลย:</p>
+      <ul>
+        <li><span class="chip dropped">pogls_api.h</span> — high-level encode/decode blob API</li>
+        <li><span class="chip dropped">pogls_stream.h</span> — PULL/PUSH streaming</li>
+        <li><span class="chip dropped">pogls_weight_stream.h</span> — LLM layer RAM window</li>
+        <li><span class="chip dropped">pogls_model_index.h</span> — layer → chunk map</li>
+      </ul>
+      <p>อาจถูก replace โดย KVBridge + geo_pipeline แต่ถ้า LLM weight streaming ยังเป็น target — ไฟล์เหล่านี้ยังจำเป็น</p>
+      <div class="act">confirm ว่า use case นี้ถูก replace ด้วย approach ใหม่ หรือต้อง re-port จาก S10</div>
+    </div>
+
+    <div class="f med">
+      <div class="f-head"><span class="f-id">G-04</span><h3>geo_cache.h — GEO_SLOTS=144 ขัดกับ geo_config.h GEO_SLOTS=576</h3><span class="b b-warn">CONSTANT CONFLICT</span></div>
+      <p><span class="chip">geo_cache.h</span> define <code>#define GEO_SLOTS 144</code> ภายในตัวเอง แต่ <span class="chip">geo_config.h</span> define <code>GEO_SLOTS=576</code></p>
+      <ul>
+        <li>ถ้า geo_cache.h include ก่อน geo_config.h → GEO_SLOTS = 144 (ผิด)</li>
+        <li>geo_cache.h ตั้งใจใช้ 144 เป็น slot count ของ cache ≠ geometry slots</li>
+        <li>ควรเปลี่ยนชื่อ define ใน geo_cache.h เป็น <code>GEO_CACHE_SLOTS</code> เพื่อ disambiguate</li>
+      </ul>
+      <div class="act">rename <code>GEO_SLOTS</code> → <code>GEO_CACHE_SLOTS</code> ใน geo_cache.h (144 slots × 6 lanes × 2 ways)</div>
+    </div>
+
+    <div class="f med">
+      <div class="f-head"><span class="f-id">G-05</span><h3>rest_server_llm_patch.py (1) และ (2) — patch ลอยอยู่ ไม่ merge</h3><span class="b b-sup">UNMERGED</span></div>
+      <p>มี 2 ไฟล์: <code>rest_server_llm_patch.py</code> และ <code>rest_server_llm_patch (1).py</code></p>
+      <ul>
+        <li>ไม่ชัดว่า version ไหน applied เข้า rest_server.py แล้ว</li>
+        <li>patch (1) อาจ conflict กับ patch หลัก</li>
+        <li>ความเสี่ยง: apply patch ซ้ำหรือ apply ผิด version</li>
+      </ul>
+      <div class="act">compare diff ทั้ง 3 files → merge patch ที่ถูกต้องเข้า rest_server.py → ลบ patch files</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FILE STATUS COMPARISON -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">05</span>S10 FILES — STATUS ใน REAL PROJECT</div>
+  <table>
+    <thead><tr><th>S10 File</th><th>Real Project Status</th><th>Replaced By / Notes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip">pogls_platform.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>Windows compat, PHI constants — still foundation</td></tr>
+      <tr><td><span class="chip">pogls_v3.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>POGLS_Mode, Shadow/Deep lane — base layer</td></tr>
+      <tr><td><span class="chip">pogls_fold.h</span></td><td><span class="b b-ok">ACTIVE core/ + twin/</span></td><td>DiamondBlock 64B frozen — both layers use it</td></tr>
+      <tr><td><span class="chip">pogls_snapshot.h</span></td><td><span class="b b-ok">ACTIVE core/ (.o)</span></td><td>compiled → .o present</td></tr>
+      <tr><td><span class="chip">pogls_delta.h</span></td><td><span class="b b-ok">ACTIVE core/ (.o)</span></td><td>compiled → .o present</td></tr>
+      <tr><td><span class="chip">pogls_delta_ext.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>Dual Merkle V3.6</td></tr>
+      <tr><td><span class="chip">pogls_fibo_addr.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>G1/G2/G3 gears — still used</td></tr>
+      <tr><td><span class="chip">pogls_geomatrix.h</span></td><td><span class="b b-ok">ACTIVE core/ + gpu/</span></td><td>18-path verdict, both CPU and GPU paths</td></tr>
+      <tr><td><span class="chip">pogls_qrpn_phaseE.h</span></td><td><span class="b b-ok">ACTIVE core/ + gpu/</span></td><td>GPU has its own copy in gpu/</td></tr>
+      <tr><td><span class="chip">pogls_bitboard.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>frontier_diffuse — graph_topology.h dependency resolved now</td></tr>
+      <tr><td><span class="chip">pogls_frontier.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>pogls_graph_topology.h now exists in core/ — no longer broken</td></tr>
+      <tr><td><span class="chip">pogls_mesh.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>pogls_detach_lane.h + pogls_engine_slice.h both exist now</td></tr>
+      <tr><td><span class="chip">pogls_5world_core.h</span></td><td><span class="b b-ok">ACTIVE core/</span></td><td>still orphaned but present — no callers found</td></tr>
+      <tr><td><span class="chip">pogls_pipeline_wire.h</span></td><td><span class="b b-sup">SUPERSEDED core/</span></td><td>→ geo_pipeline.h (S14) is the production path</td></tr>
+      <tr><td><span class="chip">pogls_audit.h</span></td><td><span class="b b-sup">SUPERSEDED core/</span></td><td>→ PoglsStatsOut, but anomaly_flags still missing from stats</td></tr>
+      <tr><td><span class="chip">pogls_hydra.h</span></td><td><span class="b b-ok">ACTIVE core/ (.o)</span></td><td>compiled → .o — Hydra heads lifecycle</td></tr>
+      <tr><td><span class="chip dropped">pogls_api.h</span></td><td><span class="b b-drop">MISSING</span></td><td>not found anywhere in project — encode/decode blob API gone</td></tr>
+      <tr><td><span class="chip dropped">pogls_stream.h</span></td><td><span class="b b-drop">MISSING</span></td><td>not found — streaming layer gone</td></tr>
+      <tr><td><span class="chip dropped">pogls_weight_stream.h</span></td><td><span class="b b-drop">MISSING</span></td><td>not found — LLM weight streaming gone</td></tr>
+      <tr><td><span class="chip dropped">pogls_model_index.h</span></td><td><span class="b b-drop">MISSING</span></td><td>not found — replaced by KVBridge approach?</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ACTION PLAN -->
+<div class="sec">
+  <div class="sec-hdr"><span class="n">06</span>ACTION PLAN — PRIORITY ORDER</div>
+  <table>
+    <thead><tr><th>#</th><th>Action</th><th>File</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr class="pri-1">
+        <td>P1</td>
+        <td>Wire <code>pogls_so_stats_out()</code> เข้า <code>_snap_from_ctx()</code> — replace synthetic proxy ด้วย live engine data (G-01)</td>
+        <td><span class="chip">rest_server.py</span></td>
+        <td>~30 min</td>
+      </tr>
+      <tr class="pri-1">
+        <td>P1</td>
+        <td>Rename <code>GEO_SLOTS→GEO_CACHE_SLOTS</code> ใน geo_cache.h — ป้องกัน silent override geo_config.h (G-04)</td>
+        <td><span class="chip">geo_cache.h</span></td>
+        <td>~5 min</td>
+      </tr>
+      <tr class="pri-2">
+        <td>P2</td>
+        <td>Guard หรือ remove <code>geo_diamond_v5x4.h</code> จาก twin_core/ — ป้องกัน wrong intersect path (G-02)</td>
+        <td><span class="chip twin">twin_core/geo_diamond_v5x4.h</span></td>
+        <td>~10 min</td>
+      </tr>
+      <tr class="pri-2">
+        <td>P2</td>
+        <td>Merge patch files → confirm <code>rest_server.py</code> version → ลบ patch (1) / patch (2) (G-05)</td>
+        <td><span class="chip">rest_server_llm_patch*.py</span></td>
+        <td>~20 min</td>
+      </tr>
+      <tr class="pri-3">
+        <td>P3</td>
+        <td>Confirm: pogls_api.h / stream / weight_stream — intentionally dropped หรือต้อง port? (G-03)</td>
+        <td><span class="chip dropped">pogls_api.h et al.</span></td>
+        <td>decision</td>
+      </tr>
+      <tr class="pri-4">
+        <td>P4</td>
+        <td>Document <code>pogls_5world_core.h</code> intent — merge เข้า ThirdEye หรือ mark as FUTURE</td>
+        <td><span class="chip">pogls_5world_core.h</span></td>
+        <td>~10 min</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  <span>POGLS Real Audit · From POGLS_core.zip + S10 zip · 2026-04-10</span>
+  <span>S10→S38+ confirmed · twin_core + GPU + POGLS38 verified from files</span>
+</div>
+
+</body>
+</html>

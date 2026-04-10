@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POGLS S10 → S19 Audit Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:       #0a0b0d;
+    --surface:  #111318;
+    --border:   #1e2228;
+    --accent:   #00e5ff;
+    --warn:     #ffaa00;
+    --danger:   #ff4455;
+    --ok:       #00e096;
+    --dim:      #3a4050;
+    --text:     #c8d0e0;
+    --text-dim: #5a6070;
+    --mono:     'JetBrains Mono', monospace;
+    --display:  'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ─── HEADER ─────────────────────────────────────── */
+  .report-header {
+    border-left: 3px solid var(--accent);
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    background: linear-gradient(135deg, #0d1117 0%, #111820 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .report-header::before {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .report-header .label {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .report-header h1 {
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .report-header .meta {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  .report-header .meta span { color: var(--text); margin: 0 8px; }
+
+  /* ─── SECTION ────────────────────────────────────── */
+  .section {
+    margin-bottom: 36px;
+  }
+  .section-title {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before {
+    content: attr(data-num);
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  /* ─── TABLE ──────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #0d1015;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ─── BADGE ──────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .badge-active    { background: rgba(0,224,150,0.12); color: var(--ok); border: 1px solid rgba(0,224,150,0.2); }
+  .badge-superseded{ background: rgba(255,170,0,0.10); color: var(--warn); border: 1px solid rgba(255,170,0,0.2); }
+  .badge-orphaned  { background: rgba(255,68,85,0.10); color: var(--danger); border: 1px solid rgba(255,68,85,0.2); }
+  .badge-partial   { background: rgba(0,229,255,0.08); color: var(--accent); border: 1px solid rgba(0,229,255,0.15); }
+  .badge-dropped   { background: rgba(90,96,112,0.20); color: var(--text-dim); border: 1px solid var(--dim); }
+  .badge-conflict  { background: rgba(255,68,85,0.15); color: #ff8090; border: 1px solid rgba(255,68,85,0.25); }
+
+  /* ─── PRIORITY DOT ───────────────────────────────── */
+  .p-hi  { color: var(--danger); }
+  .p-med { color: var(--warn); }
+  .p-lo  { color: var(--text-dim); }
+
+  /* ─── CODE CHIP ──────────────────────────────────── */
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #0d1015;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #a0c8e0;
+    white-space: nowrap;
+  }
+
+  /* ─── FINDING BOX ────────────────────────────────── */
+  .finding {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    position: relative;
+  }
+  .finding.hi  { border-left: 3px solid var(--danger); }
+  .finding.med { border-left: 3px solid var(--warn); }
+  .finding.lo  { border-left: 3px solid var(--dim); }
+  .finding.ok  { border-left: 3px solid var(--ok); }
+
+  .finding-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .finding-id {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .finding h3 {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .finding p {
+    color: var(--text);
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .finding ul {
+    padding-left: 18px;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .finding ul li { margin-bottom: 3px; }
+  .finding .action {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--accent);
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  .finding .action::before { content: "→ ACTION: "; font-weight: 700; }
+
+  /* ─── ARCH DIAGRAM ───────────────────────────────── */
+  .arch {
+    background: #0a0c10;
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 2;
+    color: #7090a0;
+    overflow-x: auto;
+  }
+  .arch .hi { color: var(--accent); font-weight: 700; }
+  .arch .ok { color: var(--ok); }
+  .arch .warn { color: var(--warn); }
+  .arch .dead { color: var(--text-dim); text-decoration: line-through; }
+
+  /* ─── SUMMARY BAR ────────────────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .summary-card .num {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .summary-card .lbl {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ─── CONSTANT TABLE HIGHLIGHTS ──────────────────── */
+  .const-conflict { color: var(--danger); }
+  .const-ok       { color: var(--ok); }
+  .const-note     { color: var(--warn); font-size: 11px; }
+
+  /* ─── FOOTER ─────────────────────────────────────── */
+  .footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="report-header">
+  <div class="label">POGLS Architecture Audit</div>
+  <h1>S10 → S19+ Gap Analysis</h1>
+  <div class="meta">
+    Generated: <span>2026-04-10</span> · Files scanned: <span>39</span> · Lines reviewed: <span>~7,800</span> · Sessions spanned: <span>S10 → S19</span>
+  </div>
+</div>
+
+<!-- SUMMARY CARDS -->
+<div class="summary-grid">
+  <div class="summary-card">
+    <div class="num" style="color:var(--ok)">14</div>
+    <div class="lbl">Active / Ported</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--warn)">7</div>
+    <div class="lbl">Superseded (partial)</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--danger)">4</div>
+    <div class="lbl">Orphaned / Dropped</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--accent)">6</div>
+    <div class="lbl">S19 New (not in S10)</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:#ff8090">3</div>
+    <div class="lbl">Constant Conflicts</div>
+  </div>
+  <div class="summary-card">
+    <div class="num" style="color:var(--ok)">5</div>
+    <div class="lbl">Action Items</div>
+  </div>
+</div>
+
+<!-- SECTION 1: ARCHITECTURE EVOLUTION -->
+<div class="section">
+  <div class="section-title" data-num="01">Architecture Evolution S10 → S19</div>
+  <div class="arch">
+<span class="ok">S10 Pipeline (foundation):</span>
+raw bytes
+  └─ scan_buf() [pogls_scanner.h] → ScanEntry per 64B chunk
+       └─ pogls_compress_block() [pogls_compress.h] → CompressHeader + payload
+            └─ file_index_add() [pogls_file_index.h] → FileIndex (chunk map)
+                 └─ pogls_reconstruct_init() [pogls_reconstruct.h] → ReconContext
+                      ├─ pogls_reconstruct_full() — full file
+                      ├─ PoglsStream [pogls_stream.h] — streaming chunks
+                      └─ ModelIndex [pogls_model_index.h] → WeightStream — layer-by-layer
+
+<span class="warn">S19 Stack (full):</span>
+libpogls_v4.so
+  └─ pogls_engine.py (ctypes mirror + PoglsStatsOut 19-field)
+       └─ pogls_cli.py
+            └─ rest_server.py (FastAPI)
+                 └─ llm_advisor.py (KV management / LLM cache)
+
+<span class="hi">Geo Kernel (S19 evolution of S10 pipeline_wire):</span>
+geo_pipeline_v5.h → geo_hardening.h + geo_hardening_whe.h
+  └─ geo_net.h (ROUTE → SPACE → FILTER → VERIFY)
+       └─ geo_config.h [GEO_SLOTS=576, GEO_FULL_N=3456 — locked]
+            └─ geo_whe.h (Wheel passive topology fingerprinter)
+                 └─ geo_dodeca_torus.h (g_map[12][5] BFS verified)
+
+<span class="dead">S10 only (not in S19):</span>
+pogls_5world_core.h  pogls_frontier.h  pogls_mesh.h  pogls_mesh_entry.h
+  </div>
+</div>
+
+<!-- SECTION 2: FILE STATUS TABLE -->
+<div class="section">
+  <div class="section-title" data-num="02">Complete File Status — All 39 Files</div>
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>S19 Equivalent</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- CORE FOUNDATION -->
+      <tr><td><span class="chip">pogls_platform.h</span></td><td>Platform</td><td><span class="badge badge-active">ACTIVE</span></td><td>still base layer</td><td>Windows compat layer, PHI constants — still used</td></tr>
+      <tr><td><span class="chip">pogls_v3.h</span></td><td>Core structs</td><td><span class="badge badge-active">ACTIVE</span></td><td>extended in v4</td><td>POGLS_Mode, Topo levels, AngularAddress — still base</td></tr>
+      <tr><td><span class="chip">pogls_fibo_addr.h</span></td><td>Address engine</td><td><span class="badge badge-active">ACTIVE</span></td><td>geo_config.h uses same PHI</td><td>G1/G2/G3 gear modes, World A/B — frozen constants</td></tr>
+      <tr><td><span class="chip">pogls_fold.h</span></td><td>DiamondBlock</td><td><span class="badge badge-active">ACTIVE</span></td><td>DIAMOND_BLOCK_SIZE=64 locked</td><td>World A/B lanes, HoneycombSlot — foundation frozen</td></tr>
+      <tr><td><span class="chip">pogls_snapshot.h</span></td><td>Durability</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>PENDING→CERTIFIED state machine — WAL deprecated V3.5</td></tr>
+      <tr><td><span class="chip">pogls_delta.h</span></td><td>Delta lanes</td><td><span class="badge badge-active">ACTIVE</span></td><td>extended by delta_ext</td><td>4-lane (X/NX/Y/NY) crash recovery — append-only</td></tr>
+      <tr><td><span class="chip">pogls_delta_ext.h</span></td><td>Delta ext</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>Dual Merkle V3.6, World B lanes 4-7</td></tr>
+      <tr><td><span class="chip">pogls_geomatrix.h</span></td><td>Geomatrix</td><td><span class="badge badge-active">ACTIVE</span></td><td>wired in pipeline_v5</td><td>18-path batch verdict, Hilbert block consistency</td></tr>
+      <tr><td><span class="chip">pogls_qrpn_phaseE.h</span></td><td>Verify</td><td><span class="badge badge-active">ACTIVE</span></td><td>used in pipeline_wire</td><td>3-world QRPN, A²+B²=C² structure lock — shadow/soft/hard</td></tr>
+      <tr><td><span class="chip">pogls_checksum.h</span></td><td>Integrity</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>XOR-fold stub created S10 — minimal but correct</td></tr>
+      <tr><td><span class="chip">pogls_node_soa.h</span></td><td>Node state</td><td><span class="badge badge-active">ACTIVE</span></td><td>NODE_MAX=162 locked</td><td>SoA layout, NodeMask 256-bit — L1 resident ~21KB</td></tr>
+      <tr><td><span class="chip">pogls_node_lut.h</span></td><td>Address→Node</td><td><span class="badge badge-active">ACTIVE</span></td><td>in compute_lut</td><td>O(1) 256B LUT, wrap mod 162 — still correct</td></tr>
+      <tr><td><span class="chip">pogls_compute_lut.h</span></td><td>L1 LUT pack</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>10.2KB total Rubik+Morton+Node — fits L1 32KB</td></tr>
+      <tr><td><span class="chip">pogls_morton.h</span></td><td>Spatial index</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>Z-order, 20-bit fold — cache locality for diffusion</td></tr>
+
+      <!-- PIPELINE LAYER -->
+      <tr><td><span class="chip">pogls_scanner.h</span></td><td>Write path</td><td><span class="badge badge-active">ACTIVE</span></td><td>entry point — unchanged</td><td>scan_buf→ScanEntry, passthru magic detect, zero-copy</td></tr>
+      <tr><td><span class="chip">pogls_compress.h</span></td><td>Compression</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>delta+PHI sym+RLE, passthru filter — enc ~250-410 MB/s</td></tr>
+      <tr><td><span class="chip">pogls_chunk_index.h</span></td><td>Chunk map</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>chunk_id→stream offset O(1), QRPN guarded header</td></tr>
+      <tr><td><span class="chip">pogls_file_index.h</span></td><td>File map</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>FileChunkRecord 64B/cache-line, TEXT/BINARY/PASSTHRU types</td></tr>
+      <tr><td><span class="chip">pogls_reconstruct.h</span></td><td>Read path</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>full + partial reconstruct, QRPN verify per chunk</td></tr>
+      <tr><td><span class="chip">pogls_stream.h</span></td><td>Streaming</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>PULL/PUSH dual mode, zero-alloc, STREAM_DONE=1</td></tr>
+      <tr><td><span class="chip">pogls_model_index.h</span></td><td>LLM layer map</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>MIDX_NAME_LEN=24 (fixed S10), 4096 layers max</td></tr>
+      <tr><td><span class="chip">pogls_weight_stream.h</span></td><td>Inference RAM</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>layer-by-layer RAM window, WS_DEFAULT_BUDGET=1.5GB</td></tr>
+      <tr><td><span class="chip">pogls_api.h</span></td><td>Public API</td><td><span class="badge badge-active">ACTIVE</span></td><td>wrapped by libpogls_v4.so</td><td>encode/decode self-describing blob, ABI layout_sig guard</td></tr>
+      <tr><td><span class="chip">theta_map.h</span></td><td>Geo coord</td><td><span class="badge badge-active">ACTIVE</span></td><td>feeds pipeline</td><td>face(0-11)/edge(0-4)/z(0-255), Lemire reduce, no float</td></tr>
+      <tr><td><span class="chip">angular_mapper_v36.h</span></td><td>Angular addr</td><td><span class="badge badge-active">ACTIVE</span></td><td>still in use</td><td>pogls_node_to_address() G1/G2/G3 gear world A/B</td></tr>
+
+      <!-- SUPERSEDED -->
+      <tr><td><span class="chip">pogls_pipeline_wire.h</span></td><td>Pipeline master</td><td><span class="badge badge-superseded">SUPERSEDED</span></td><td>geo_pipeline_v5.h</td><td class="p-med">Still valid logic — <span class="chip">geo_pipeline_v5.h</span> is the speed-optimized replacement (530 M/s vs ~100 M/s)</td></tr>
+      <tr><td><span class="chip">pogls_bitboard.h</span></td><td>Graph diffusion</td><td><span class="badge badge-superseded">SUPERSEDED</span></td><td>geo_whe.h / geo_net.h</td><td class="p-med">frontier_diffuse logic now lives in WHE topology fingerprinter</td></tr>
+      <tr><td><span class="chip">pogls_audit.h</span></td><td>Tile audit</td><td><span class="badge badge-superseded">SUPERSEDED</span></td><td>pogls_stats_out.h</td><td class="p-hi"><strong>PARTIAL:</strong> anomaly_flags bitmap (6 types) not in PoglsStatsOut 19-field — potential gap</td></tr>
+
+      <!-- ORPHANED / DROPPED -->
+      <tr><td><span class="chip">pogls_5world_core.h</span></td><td>5-world addr</td><td><span class="badge badge-orphaned">ORPHANED</span></td><td>none</td><td class="p-hi">Dual-world + 3 neg variants, XOR parity invariant — no S19 reference at all</td></tr>
+      <tr><td><span class="chip">pogls_frontier.h</span></td><td>BFS propagation</td><td><span class="badge badge-dropped">DROPPED</span></td><td>geo_net.h (partial)</td><td>depends on pogls_graph_topology.h (missing from zip) — logic overlaps QRPN traversal</td></tr>
+      <tr><td><span class="chip">pogls_mesh.h</span></td><td>Voronoi/Delaunay</td><td><span class="badge badge-dropped">DROPPED</span></td><td>none</td><td>9 Voronoi seeds × 3 slices = 27 (162/6) — elegant design, no S19 reference</td></tr>
+      <tr><td><span class="chip">pogls_mesh_entry.h</span></td><td>Reflex bias</td><td><span class="badge badge-dropped">DROPPED</span></td><td>none</td><td>ReflexBias short-term memory, POGLS38 long-term planned — never reached S11</td></tr>
+
+      <!-- TEST / BENCH -->
+      <tr><td><span class="chip">test_api.c / test_edge.c</span></td><td>Unit tests</td><td><span class="badge badge-partial">REF ONLY</span></td><td>new test suite</td><td>6+2 tests pass S10 — patterns reusable for v4 testing</td></tr>
+      <tr><td><span class="chip">test_fault.c / test_e2e_pipeline.c</span></td><td>Integration</td><td><span class="badge badge-partial">REF ONLY</span></td><td>new test suite</td><td>fault injection patterns (bit-flip, CRC, OOB) — good reference</td></tr>
+      <tr><td><span class="chip">bench_api.c / bench_weight_stream.c</span></td><td>Benchmarks</td><td><span class="badge badge-partial">REF ONLY</span></td><td>new bench suite</td><td>baseline numbers: enc 250-410 MB/s, ws 296 MB/s</td></tr>
+      <tr><td><span class="chip">cli/pogls_cli.c</span></td><td>CLI</td><td><span class="badge badge-superseded">SUPERSEDED</span></td><td>pogls_cli.py</td><td>4-command C CLI — superseded by Python CLI, logic still valid</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 3: CONSTANT CONFLICTS -->
+<div class="section">
+  <div class="section-title" data-num="03">Constant Conflicts — S10 vs S19</div>
+  <table>
+    <thead>
+      <tr><th>Constant</th><th>S10 Value</th><th>S19 Value</th><th>File (S10)</th><th>Verdict</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="chip">PHI_UP</span></td>
+        <td><span class="const-conflict">1697054</span> (pogls_delta.h)<br><span class="const-ok">1696631</span> (pogls_fold.h)</td>
+        <td><span class="const-ok">1696631</span></td>
+        <td><span class="chip">pogls_delta.h</span></td>
+        <td><span class="badge badge-conflict">CONFLICT</span> <span class="const-note">pogls_delta.h ใช้ค่าผิด — delta.h define ไม่ตรงกับ fold.h และ fibo_addr.h</span></td>
+      </tr>
+      <tr>
+        <td><span class="chip">PHI_DOWN</span></td>
+        <td><span class="const-conflict">648609</span> (pogls_delta.h)<br><span class="const-ok">648055</span> (pogls_fold.h)</td>
+        <td><span class="const-ok">648055</span></td>
+        <td><span class="chip">pogls_delta.h</span></td>
+        <td><span class="badge badge-conflict">CONFLICT</span> <span class="const-note">ค่าต่างกัน 554 units — delta lane address calculation drift</span></td>
+      </tr>
+      <tr>
+        <td><span class="chip">NODE_MAX</span></td>
+        <td><span class="const-ok">162</span> (node_soa.h, fold.h, bitboard.h)</td>
+        <td><span class="const-ok">162</span></td>
+        <td>multiple</td>
+        <td><span class="badge badge-active">OK</span> ตรงกันทุกที่</td>
+      </tr>
+      <tr>
+        <td><span class="chip">DIAMOND_BLOCK_SIZE</span></td>
+        <td><span class="const-ok">64</span></td>
+        <td><span class="const-ok">64</span></td>
+        <td><span class="chip">pogls_fold.h</span></td>
+        <td><span class="badge badge-active">OK</span> frozen — ห้ามเปลี่ยน</td>
+      </tr>
+      <tr>
+        <td><span class="chip">WS_DONE</span></td>
+        <td><span class="const-ok">1</span> (fixed S10)</td>
+        <td><span class="const-ok">1</span></td>
+        <td><span class="chip">pogls_weight_stream.h</span></td>
+        <td><span class="badge badge-active">OK</span> confirmed fix in S10</td>
+      </tr>
+      <tr>
+        <td><span class="chip">MIDX_NAME_LEN</span></td>
+        <td><span class="const-ok">24</span> (fixed S10: was 32)</td>
+        <td><span class="const-ok">24</span></td>
+        <td><span class="chip">pogls_model_index.h</span></td>
+        <td><span class="badge badge-active">OK</span> ModelLayerRecord = 64B exact</td>
+      </tr>
+      <tr>
+        <td><span class="chip">GEO_SLOTS / GEO_FULL_N</span></td>
+        <td>—</td>
+        <td>576 / 3456</td>
+        <td>n/a</td>
+        <td><span class="badge badge-orphaned">S19 ONLY</span> <span class="const-note">geo_config.h ไม่มีใน S10 — ต้อง include ก่อน use pipeline_wire.h</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 4: KEY FINDINGS -->
+<div class="section">
+  <div class="section-title" data-num="04">Key Findings</div>
+
+  <div class="finding hi">
+    <div class="finding-head">
+      <span class="finding-id">F-01</span>
+      <h3>PHI Constants Dual-Define Conflict ใน pogls_delta.h</h3>
+      <span class="badge badge-conflict">HIGH</span>
+    </div>
+    <p><span class="chip">pogls_delta.h</span> define PHI_UP=<strong>1697054</strong> และ PHI_DOWN=<strong>648609</strong> แต่ <span class="chip">pogls_fold.h</span> และ <span class="chip">pogls_fibo_addr.h</span> ใช้ 1696631 / 648055 ซึ่งเป็นค่าที่ S19 ยึดถือ</p>
+    <ul>
+      <li>ถ้า delta.h ถูก include ก่อน fold.h → PHI_UP ผิด → address calculation drift</li>
+      <li>delta lane block ที่เขียนด้วยค่าผิดจะ reconstruct ไม่ตรง</li>
+      <li>ควรลบ PHI defines ออกจาก delta.h — ใช้จาก platform.h อย่างเดียว</li>
+    </ul>
+    <div class="action">ลบ PHI_UP/PHI_DOWN/PHI_SCALE จาก pogls_delta.h → include pogls_platform.h แทน</div>
+  </div>
+
+  <div class="finding hi">
+    <div class="finding-head">
+      <span class="finding-id">F-02</span>
+      <h3>pogls_audit.h — anomaly_flags ไม่มีใน PoglsStatsOut S19</h3>
+      <span class="badge badge-conflict">HIGH</span>
+    </div>
+    <p><span class="chip">pogls_audit.h</span> มี anomaly bitmap 6 ประเภทที่ละเอียดกว่า:</p>
+    <ul>
+      <li>ANOMALY_HASH_MISMATCH (0x01), ANOMALY_COORD_DRIFT (0x02)</li>
+      <li>ANOMALY_OVERLAP_DELTA (0x04), ANOMALY_WARP_CORRUPT (0x08)</li>
+      <li>ANOMALY_DEEP_UNREADABLE (0x10), ANOMALY_SEQUENCE_BREAK (0x20)</li>
+    </ul>
+    <p>S19 <span class="chip">PoglsStatsOut</span> มี 19 fields แต่ไม่มี anomaly classification — <span class="chip">/llm_report</span> จะรายงานได้แค่ stats ตัวเลข ไม่รู้ว่า "coord drift" หรือ "sequence break"</p>
+    <div class="action">Port anomaly_flags (uint8_t) เข้า PoglsStatsOut เป็น field 20 — เพิ่ม version sentinel</div>
+  </div>
+
+  <div class="finding med">
+    <div class="finding-head">
+      <span class="finding-id">F-03</span>
+      <h3>pogls_5world_core.h — Orphaned แต่ Logic ตรงกับ ThirdEye</h3>
+      <span class="badge badge-orphaned">ORPHANED</span>
+    </div>
+    <p>P5WorldState มี address 5 แบบพร้อมกัน (icosa/dodeca/fibo + neg variants) พร้อม <span class="chip">P5WorldCheck.aggregate_ok</span> ที่ XOR ทั้ง 5 โลก = 0 — เป็น quantum parity invariant</p>
+    <ul>
+      <li>ThirdEye มี 3 layers (NORMAL/STRESSED/ANOMALY) — 5World มี 5 variants</li>
+      <li>p5world_dual_map() ใช้ bit-rotate 10 — ตรงกับ Rubik permutation pattern</li>
+      <li>ไม่มี reference ใน geo_config.h หรือ geo_pipeline_v5.h เลย</li>
+    </ul>
+    <div class="action">Document ว่า 5World concept merge เข้า ThirdEye หรือ intentionally dropped — ถ้า keep: wire เข้า geo_hardening.h เป็น verify layer</div>
+  </div>
+
+  <div class="finding med">
+    <div class="finding-head">
+      <span class="finding-id">F-04</span>
+      <h3>pogls_mesh.h + pogls_mesh_entry.h — Voronoi/Delaunay Layer ไม่ถูก Port</h3>
+      <span class="badge badge-dropped">DROPPED</span>
+    </div>
+    <p>Mesh layer เป็น async observer นอก hot path รับ DetachEntry → cluster via Voronoi (9 seeds × 3 slices = 27) → Delaunay edge graph</p>
+    <ul>
+      <li>9 seeds × 3 slices = 27 = 162/6 — ตรงกับ sacred number alignment</li>
+      <li>ReflexBias ใน mesh_entry.h คือ short-term muscle memory — POGLS38 planned แต่ไม่ถึง</li>
+      <li>depends on <span class="chip">pogls_detach_lane.h</span> และ <span class="chip">pogls_engine_slice.h</span> ซึ่งไม่มีใน zip</li>
+    </ul>
+    <div class="action">Mark as FUTURE — concept ดีแต่ dependencies missing, ไม่ควร port ก่อน detach_lane เสร็จ</div>
+  </div>
+
+  <div class="finding med">
+    <div class="finding-head">
+      <span class="finding-id">F-05</span>
+      <h3>pogls_frontier.h — BFS Logic ซ้ำกับ geo_net.h แต่ Missing Dependency</h3>
+      <span class="badge badge-dropped">DROPPED</span>
+    </div>
+    <p><span class="chip">pogls_frontier.h</span> มี frontier_expand() BFS radius-N propagation บน bitboard graph แต่ depend on <span class="chip">pogls_graph_topology.h</span> ที่ไม่มีในทั้ง S10 zip และ S19 context</p>
+    <ul>
+      <li>frontier_new_only() = BFS visited masking — logic ตรงกับ QRPN traversal ใน geo_net.h</li>
+      <li>frontier_parity() = bb_popcount mod 2 — ใช้เป็น integrity fingerprint ได้</li>
+    </ul>
+    <div class="action">Extract frontier_parity() เข้า geo_whe.h เป็น parity check primitive — ส่วน frontier_expand ทิ้งไว้ก่อน</div>
+  </div>
+
+  <div class="finding ok">
+    <div class="finding-head">
+      <span class="finding-id">F-06</span>
+      <h3>pogls_pipeline_wire.h — S10 Version ยังถูกต้อง Architecturally</h3>
+      <span class="badge badge-superseded">SUPERSEDED (OK)</span>
+    </div>
+    <p>S10 pipeline_wire มีโครงสร้าง [GeoNet+RH] → [Geomatrix FILTER] → [GeoNet VERIFY] + QRPN check ครบถ้วน — S19 geo_pipeline_v5.h แค่ optimize ให้เร็วขึ้น (530 M/s) ไม่ได้เปลี่ยน logic</p>
+    <p>ข้อสังเกต: S10 pipeline_wire.h depend on geo_config.h ซึ่งยังไม่มีตอน S10 — แปลว่า file นี้ถูกเขียนแบบ forward-compatible รอ geo_config.h</p>
+    <div class="action">ไม่ต้องทำอะไร — S19 geo_pipeline_v5.h เป็น proper replacement แล้ว</div>
+  </div>
+</div>
+
+<!-- SECTION 5: S19 NEW FILES -->
+<div class="section">
+  <div class="section-title" data-num="05">S19+ Files ที่ไม่มีใน S10</div>
+  <table>
+    <thead>
+      <tr><th>File</th><th>Session</th><th>Role</th><th>Priority</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="chip">pogls_stats_out.h</span></td>
+        <td>S19</td>
+        <td>19-field PoglsStatsOut struct, version sentinel POS\x02, ctypes mirror in pogls_engine.py</td>
+        <td><span class="p-hi">●</span> CRITICAL — current open item</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_config.h</span></td>
+        <td>mid</td>
+        <td>Single source of truth: GEO_SLOTS=576, GEO_FULL_N=3456, GEOMATRIX_PATHS=18</td>
+        <td><span class="p-hi">●</span> CRITICAL — missing จะ break pipeline_wire.h include</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_pipeline_v5.h</span></td>
+        <td>post-S10</td>
+        <td>Replaces pipeline_wire: branchless te_expose 2.10→0.76 ns/op, magic-number division, gp_write FULL ~530 M/s</td>
+        <td><span class="p-hi">●</span> HIGH — speed layer</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_hardening.h + geo_hardening_whe.h</span></td>
+        <td>S18-S19</td>
+        <td>4 fixes: degenerate seed guard, geo_fused_write_batch (39.4→106.9 Minputs/s, 2.7×), WHE audit</td>
+        <td><span class="p-med">●</span> MEDIUM</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_whe.h</span></td>
+        <td>S19</td>
+        <td>Wheel passive topology fingerprinter — S19 WHE audit fixed 2 bugs: triangle index overflow (% 5u), step collision (step_offset param)</td>
+        <td><span class="p-med">●</span> MEDIUM — audit complete</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_net.h</span></td>
+        <td>mid</td>
+        <td>ROUTE→SPACE→FILTER→VERIFY routing layer, QRPN = pure Pythagorean traversal verifier</td>
+        <td><span class="p-lo">●</span> LOW — stable</td>
+      </tr>
+      <tr>
+        <td><span class="chip">geo_dodeca_torus.h</span></td>
+        <td>mid</td>
+        <td>g_map[12][5] topology, BFS 12/12 reachable, orientable — dodecahedron face mapping</td>
+        <td><span class="p-lo">●</span> LOW — stable</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SECTION 6: ACTION PLAN -->
+<div class="section">
+  <div class="section-title" data-num="06">Action Plan (ordered by priority)</div>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Action</th><th>Target File</th><th>Effort</th><th>Risk</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--danger);font-weight:700">A1</td>
+        <td>Fix PHI constant conflict — remove PHI_UP/DOWN/SCALE จาก <span class="chip">pogls_delta.h</span>, include pogls_platform.h แทน</td>
+        <td><span class="chip">pogls_delta.h</span></td>
+        <td>5 min</td>
+        <td><span class="badge badge-conflict">HIGH — silent data drift</span></td>
+      </tr>
+      <tr>
+        <td style="color:var(--danger);font-weight:700">A2</td>
+        <td>Wire real <span class="chip">eng.stats_out()</span> เข้า <span class="chip">_snap_from_ctx()</span> — replace kv_live/kv_tomb proxy (open item S19)</td>
+        <td><span class="chip">rest_server.py</span></td>
+        <td>30 min</td>
+        <td><span class="badge badge-superseded">MED — API already defined</span></td>
+      </tr>
+      <tr>
+        <td style="color:var(--warn);font-weight:700">A3</td>
+        <td>Port anomaly_flags (uint8_t bitmask, 6 types) เข้า PoglsStatsOut เป็น field 20 + bump version sentinel</td>
+        <td><span class="chip">pogls_stats_out.h</span></td>
+        <td>20 min</td>
+        <td><span class="badge badge-partial">MED — additive change</span></td>
+      </tr>
+      <tr>
+        <td style="color:var(--warn);font-weight:700">A4</td>
+        <td>Document / Decision: 5World concept → ThirdEye merge หรือ intentional drop? ถ้า keep: เพิ่ม p5world_verify() เป็น optional hook ใน geo_hardening.h</td>
+        <td><span class="chip">pogls_5world_core.h</span></td>
+        <td>decision only</td>
+        <td><span class="badge badge-orphaned">LOW — no breaking change</span></td>
+      </tr>
+      <tr>
+        <td style="color:var(--text-dim);font-weight:700">A5</td>
+        <td>Extract frontier_parity() จาก pogls_frontier.h → geo_whe.h เป็น parity audit primitive (4 lines)</td>
+        <td><span class="chip">geo_whe.h</span></td>
+        <td>10 min</td>
+        <td><span class="badge badge-active">LOW — additive only</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>POGLS S10 Audit Report · 2026-04-10</span>
+  <span>Files: 39 · Lines: ~7,800 · Session: S10→S19</span>
+</div>
+
+</body>
+</html>
