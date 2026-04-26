@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POGLS · Paperwallet v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap');
+
+:root {
+  --bg:       #07070f;
+  --surface:  #0c0c1a;
+  --border:   #1a1a30;
+  --dim:      #252545;
+  --muted:    #404070;
+  --text:     #b0b0d0;
+  --bright:   #e0e0ff;
+  --mono:     'Share Tech Mono', monospace;
+  --display:  'Rajdhani', sans-serif;
+  --cell:     20px;
+  --gap:      1px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; }
+
+/* ── layout ── */
+.shell { display: grid; grid-template-rows: auto 1fr; height: 100vh; overflow: hidden; }
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-wrap: wrap;
+}
+.topbar h1 { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .15em; color: var(--bright); flex-shrink: 0; }
+.topbar .sep { color: var(--dim); }
+
+.main { display: grid; grid-template-columns: 280px 1fr; overflow: hidden; }
+.sidebar { border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.canvas-area { overflow: auto; padding: 20px; background: var(--bg); }
+
+/* ── inputs ── */
+.field-label { font-size: 9px; letter-spacing: .12em; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=number] {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--bright); font-family: var(--mono); font-size: 12px;
+  padding: 7px 10px; outline: none; transition: border-color .15s;
+}
+input:focus { border-color: var(--muted); }
+input::placeholder { color: var(--dim); }
+input.err { border-color: #c0392b !important; }
+
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  background: none; border: 1px solid var(--border); color: var(--text);
+  font-family: var(--mono); font-size: 11px; padding: 6px 12px;
+  cursor: pointer; letter-spacing: .05em; transition: all .15s; flex: 1;
+}
+.btn:hover { border-color: var(--muted); color: var(--bright); }
+.btn.active { border-color: var(--muted); color: var(--bright); background: var(--dim); }
+
+/* mode tabs */
+.tab-row { display: flex; gap: 0; }
+.tab {
+  flex: 1; padding: 6px 8px; border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px; cursor: pointer;
+  background: none; color: var(--muted); letter-spacing: .06em;
+  transition: all .15s; margin-right: -1px;
+}
+.tab.on { background: var(--dim); color: var(--bright); border-color: var(--muted); z-index: 1; }
+
+/* addr list */
+.addr-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.addr-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; border: 1px solid var(--border);
+  font-size: 10px; cursor: pointer; transition: border-color .1s;
+}
+.addr-item:hover { border-color: var(--muted); }
+.addr-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.addr-item .b62 { flex: 1; color: var(--bright); }
+.addr-item .rm { color: var(--dim); cursor: pointer; padding: 0 2px; }
+.addr-item .rm:hover { color: #c0392b; }
+
+/* section headers */
+.sec { font-size: 9px; letter-spacing: .14em; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+
+/* decode result */
+.decode-out {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 10px; font-size: 10px; display: none;
+}
+.decode-out.vis { display: block; }
+.decode-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid var(--dim); }
+.decode-row:last-child { border: none; }
+.dk { color: var(--muted); }
+.dv { color: var(--bright); }
+
+/* ── GRID CARD ── */
+.card {
+  display: inline-flex; flex-direction: column; gap: 8px;
+  padding: 14px; background: var(--surface);
+  border: 1px solid var(--border); position: relative;
+  vertical-align: top;
+}
+.card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:var(--sc,#444); opacity:.8; }
+
+.grid-wrap { display: grid; grid-template-columns: repeat(8,var(--cell)); grid-template-rows: repeat(8,var(--cell)); gap: var(--gap); position: relative; }
+.cell { background: #101028; }
+.cell.on { background: #e8e8f8; }
+
+.overlay-svg { position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
+.ring-svg    { position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; opacity:.25; }
+
+.ibar { height:2px; background:var(--dim); }
+.ifill { height:100%; background:var(--sc,#444); }
+
+.c-meta { display:grid; grid-template-columns:1fr 1fr; gap:1px 8px; font-size:8px; }
+.c-meta .k { color:var(--muted); }
+.c-meta .v { color:var(--text); }
+
+.c-b62 { font-size:12px; letter-spacing:.1em; color:var(--bright); border-top:1px solid var(--border); padding-top:6px; }
+.c-hex { font-size:8px; color:var(--dim); letter-spacing:.06em; }
+
+/* ── RADIAL CARD ── */
+.radial-card {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px; background: var(--surface); border: 1px solid var(--border);
+  position: relative; vertical-align: top;
+}
+.radial-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:var(--sc,#444); opacity:.8; }
+.radial-card .c-b62 { text-align: center; }
+.radial-card .c-hex { text-align: center; }
+
+/* ── BLUEPRINT PAGE ── */
+.blueprint-page {
+  background: #020208;
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  min-width: 600px;
+}
+.bp-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid #1a2a4a; padding-bottom: 8px; margin-bottom: 16px;
+}
+.bp-title { font-family: var(--display); font-size: 13px; letter-spacing: .2em; color: #4a6aaa; }
+.bp-stamp { font-size: 8px; color: #2a3a5a; letter-spacing: .1em; }
+.bp-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.bp-corner {
+  position: absolute; width: 12px; height: 12px;
+  border-color: #1a2a4a; border-style: solid; border-width: 0;
+}
+.bp-corner.tl { top:8px; left:8px; border-top-width:1px; border-left-width:1px; }
+.bp-corner.tr { top:8px; right:8px; border-top-width:1px; border-right-width:1px; }
+.bp-corner.bl { bottom:8px; left:8px; border-bottom-width:1px; border-left-width:1px; }
+.bp-corner.br { bottom:8px; right:8px; border-bottom-width:1px; border-right-width:1px; }
+
+/* scroll container */
+.scroll-canvas { display: flex; flex-direction: column; gap: 4px; }
+.scroll-divider {
+  height: 1px; background: repeating-linear-gradient(90deg, var(--border) 0, var(--border) 4px, transparent 4px, transparent 8px);
+  margin: 4px 0;
+}
+
+@media print {
+  .shell { height: auto; overflow: visible; }
+  .topbar, .sidebar { display: none; }
+  .main { grid-template-columns: 1fr; }
+  .canvas-area { padding: 0; }
+  body { background: #fff; color: #000; }
+  .card, .radial-card { border-color: #ccc; background: #fff; break-inside: avoid; }
+  .cell { background: #e8e8e8; }
+  .cell.on { background: #111; }
+  .c-b62 { color: #000; }
+  .blueprint-page { background: #fff; border-color: #ccc; break-before: page; }
+  .bp-title { color: #336; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- topbar -->
+<div class="topbar">
+  <h1>POGLS · PAPERWALLET</h1>
+  <span class="sep">·</span>
+  <span style="font-size:9px;color:var(--muted)">addr=uint64 · b62=11ch · grid=8×8 lossless · radial=fibonacci · v2</span>
+  <div style="margin-left:auto;display:flex;gap:6px">
+    <button class="btn" onclick="window.print()" style="flex:none">⎙ PRINT</button>
+    <button class="btn" onclick="exportAll()" style="flex:none">↓ EXPORT SVG</button>
+  </div>
+</div>
+
+<div class="main">
+<!-- sidebar -->
+<div class="sidebar">
+
+  <div class="sec">ADD ADDRESS</div>
+  <div>
+    <div class="field-label">UINT64 / HEX / BASE62</div>
+    <input id="addrIn" type="text" placeholder="54  or  0x36  or  0000000000s" />
+  </div>
+  <div class="btn-row">
+    <button class="btn active" onclick="addFromInput()">+ ADD</button>
+    <button class="btn" onclick="clearAll()">CLEAR</button>
+  </div>
+
+  <div class="sec">PRESETS</div>
+  <div class="btn-row">
+    <button class="btn" onclick="loadPreset('sacred')">sacred</button>
+    <button class="btn" onclick="loadPreset('worlds')">worlds</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" onclick="loadPreset('random')">random×8</button>
+    <button class="btn" onclick="loadPreset('sequence')">seq×8</button>
+  </div>
+
+  <div class="sec">ADDRESSES  <span id="addrCount" style="color:var(--text)">0</span></div>
+  <div class="addr-list" id="addrList"></div>
+
+  <div class="sec">DISPLAY MODE</div>
+  <div class="tab-row">
+    <button class="tab on"  id="tabGrid"    onclick="setMode('grid')">GRID</button>
+    <button class="tab"     id="tabRadial"  onclick="setMode('radial')">RADIAL</button>
+    <button class="tab"     id="tabBlueprint" onclick="setMode('blueprint')">SCROLL</button>
+  </div>
+
+  <div class="sec">DECODE FROM GRID</div>
+  <div>
+    <div class="field-label">BASE62 (11 chars)</div>
+    <input id="decIn" type="text" placeholder="0000000000s" maxlength="11" oninput="liveDecodeB62(this)" />
+  </div>
+  <div id="decOut" class="decode-out"></div>
+
+  <div class="sec" style="margin-top:auto">SPEC</div>
+  <div style="font-size:8px;color:var(--dim);line-height:1.8">
+    alphabet: 0-9 A-Z a-z<br>
+    length: 11 chars fixed<br>
+    padding: zero-left<br>
+    case: sensitive (A≠a)<br>
+    max: LygHa16AHYF<br>
+    sort: b62 == numeric
+  </div>
+</div>
+
+<!-- canvas -->
+<div class="canvas-area" id="canvas"></div>
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── CODEC ────────────────────────────────────────────────────────────
+const ALPHA = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+const BASE = 62n, B62N = 11, U64MAX = (1n<<64n)-1n
+const DEC = Object.fromEntries([...ALPHA].map((c,i)=>[c,BigInt(i)]))
+
+function b62enc(n) {
+  let x=BigInt(n), o=[]
+  for(let i=0;i<B62N;i++){o.push(ALPHA[Number(x%BASE)]);x/=BASE}
+  return o.reverse().join('')
+}
+function b62dec(s) {
+  if(s.length!==B62N) throw 0
+  let n=0n
+  for(const c of s){if(DEC[c]===undefined)throw 0; n=n*BASE+DEC[c]}
+  return n
+}
+function toHex(n){return BigInt(n).toString(16).toUpperCase().padStart(16,'0')}
+function parseAddr(s){
+  s=s.trim()
+  if(!s)throw 0
+  if(/^0x/i.test(s))return BigInt(s)
+  if(/^\d+$/.test(s))return BigInt(s)
+  if(s.length===11)return b62dec(s)
+  if(/^[0-9a-fA-F]{16}$/.test(s))return BigInt('0x'+s)
+  throw 0
+}
+
+// ── DECOMPOSE ────────────────────────────────────────────────────────
+const SCOLS = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#3498DB','#9B59B6']
+const WLBL  = ['4n','5n','6n']
+const WSHP  = ['circle','triangle','square']
+
+function decompose(a){
+  const n=BigInt(a)
+  const spoke=Number(n%6n), slot=Number((n>>6n)%27n), world=Number((n>>11n)%3n)
+  const layer=Number((n>>13n)%4n), intens=slot?Math.round(slot/26*255):0
+  const bits=[]
+  for(let i=63;i>=0;i--)bits.push(Number((n>>BigInt(i))&1n))
+  return {addr:n,spoke,slot,world,layer,intens,bits,color:SCOLS[spoke],wlbl:WLBL[world],shape:WSHP[world]}
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let addrs=[], mode='grid'
+
+// ── SIDEBAR LIST ─────────────────────────────────────────────────────
+function refreshList(){
+  const el=document.getElementById('addrList')
+  document.getElementById('addrCount').textContent=addrs.length
+  el.innerHTML=''
+  addrs.forEach((a,i)=>{
+    const d=decompose(a)
+    const row=document.createElement('div')
+    row.className='addr-item'
+    row.innerHTML=`<div class="dot" style="background:${d.color}"></div>
+      <span class="b62">${b62enc(a)}</span>
+      <span class="rm" onclick="removeAddr(${i})">✕</span>`
+    row.onclick=e=>{if(!e.target.classList.contains('rm'))scrollToCard(i)}
+    el.appendChild(row)
+  })
+}
+
+function removeAddr(i){addrs.splice(i,1);refreshList();renderCanvas()}
+function clearAll(){addrs=[];refreshList();renderCanvas()}
+function scrollToCard(i){
+  const c=document.getElementById('canvas')
+  const cards=c.querySelectorAll('.card,.radial-card,.bp-card')
+  if(cards[i])cards[i].scrollIntoView({behavior:'smooth',block:'nearest'})
+}
+
+function addFromInput(){
+  const inp=document.getElementById('addrIn')
+  try{
+    const a=parseAddr(inp.value)
+    addrs.push(a); inp.value=''; inp.classList.remove('err')
+    refreshList(); renderCanvas()
+  }catch{inp.classList.add('err');setTimeout(()=>inp.classList.remove('err'),1000)}
+}
+
+document.getElementById('addrIn').addEventListener('keydown',e=>{if(e.key==='Enter')addFromInput()})
+
+// ── PRESETS ───────────────────────────────────────────────────────────
+const PRESETS={
+  sacred:[0n,1n,54n,162n,648n,640n,654n,2562n],
+  worlds:[0n,BigInt('0x800'),BigInt('0x1000'),162n,54n,648n,1n<<32n,1n<<48n],
+  sequence:[...Array(8)].map((_,i)=>BigInt(i*54)),
+}
+function loadPreset(n){
+  addrs=n==='random'
+    ?[...Array(8)].map(()=>BigInt(Math.floor(Math.random()*Number.MAX_SAFE_INTEGER)))
+    :[...(PRESETS[n]||[])]
+  refreshList();renderCanvas()
+}
+
+// ── MODE ──────────────────────────────────────────────────────────────
+function setMode(m){
+  mode=m
+  ;['grid','radial','blueprint'].forEach(x=>{
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1))
+      .classList.toggle('on',x===m)
+  })
+  renderCanvas()
+}
+
+// ── RENDER DISPATCH ───────────────────────────────────────────────────
+function renderCanvas(){
+  const c=document.getElementById('canvas')
+  c.innerHTML=''
+  if(!addrs.length){c.innerHTML='<div style="color:var(--dim);font-size:11px;padding:20px">add addresses or load a preset</div>';return}
+  if(mode==='grid')      renderGrid(c)
+  else if(mode==='radial')  renderRadial(c)
+  else                   renderBlueprint(c)
+}
+
+// ── GRID MODE ─────────────────────────────────────────────────────────
+function renderGrid(c){
+  const wrap=document.createElement('div')
+  wrap.style.cssText='display:flex;flex-wrap:wrap;gap:14px'
+  addrs.forEach(a=>wrap.appendChild(makeGridCard(a)))
+  c.appendChild(wrap)
+}
+
+function makeGridCard(addr){
+  const d=decompose(addr)
+  const card=document.createElement('div')
+  card.className='card'
+  card.style.setProperty('--sc',d.color)
+
+  // grid
+  const gw=document.createElement('div')
+  gw.className='grid-wrap'
+  d.bits.forEach(b=>{
+    const cell=document.createElement('div')
+    cell.className='cell'+(b?' on':'')
+    gw.appendChild(cell)
+  })
+
+  // overlay ring
+  const rsvg=makeSVG(28,28)
+  rsvg.className='ring-svg'
+  const rc=makeSVGEl('circle',{cx:14,cy:14,r:11,stroke:d.color,'stroke-width':1,fill:'none'})
+  rsvg.appendChild(rc); gw.appendChild(rsvg)
+
+  // overlay shape
+  const osvg=makeSVG(14,14)
+  osvg.className='overlay-svg'
+  osvg.style.opacity='.9'
+  gw.appendChild(osvg)
+  addShape(osvg,d.shape,d.color,7,7,5)
+
+  card.appendChild(gw)
+
+  // intensity
+  const ib=document.createElement('div'); ib.className='ibar'
+  const ifill=document.createElement('div'); ifill.className='ifill'
+  ifill.style.width=(d.intens/255*100).toFixed(0)+'%'
+  ib.appendChild(ifill); card.appendChild(ib)
+
+  // meta
+  const meta=document.createElement('div'); meta.className='c-meta'
+  meta.innerHTML=`
+    <span class=k>spoke</span><span class=v style="color:${d.color}">${d.spoke}</span>
+    <span class=k>world</span><span class=v style="color:${d.color}">${d.wlbl}</span>
+    <span class=k>slot</span><span class=v>${d.slot}</span>
+    <span class=k>layer</span><span class=v>${d.layer}</span>`
+  card.appendChild(meta)
+
+  const b62l=document.createElement('div'); b62l.className='c-b62'
+  b62l.textContent=b62enc(addr); card.appendChild(b62l)
+  const hexl=document.createElement('div'); hexl.className='c-hex'
+  hexl.textContent='0x'+toHex(addr); card.appendChild(hexl)
+
+  return card
+}
+
+// ── RADIAL MODE ───────────────────────────────────────────────────────
+const FIBS=[1,2,3,5,8,13,21,34,55,89]
+
+function renderRadial(c){
+  const wrap=document.createElement('div')
+  wrap.style.cssText='display:flex;flex-wrap:wrap;gap:16px'
+  addrs.forEach(a=>wrap.appendChild(makeRadialCard(a)))
+  c.appendChild(wrap)
+}
+
+function makeRadialCard(addr){
+  const d=decompose(addr)
+  const SIZE=176, CX=88, CY=88, card=document.createElement('div')
+  card.className='radial-card'
+  card.style.setProperty('--sc',d.color)
+
+  const svg=makeSVG(SIZE,SIZE)
+
+  // bg circle
+  svg.appendChild(makeSVGEl('circle',{cx:CX,cy:CY,r:84,fill:'#0a0a18',stroke:d.color,'stroke-width':.5,opacity:.3}))
+
+  // fibonacci rings — 1 bit per ring-segment
+  const RINGS=8  // 8 fibonacci rings for 64 bits (8 bits per ring)
+  for(let ring=0;ring<RINGS;ring++){
+    const r_inner=10+ring*9, r_outer=10+ring*9+8
+    const bitsInRing=d.bits.slice(ring*8,(ring+1)*8)
+    const N=8, sweep=2*Math.PI/N
+    for(let i=0;i<N;i++){
+      const a0=-Math.PI/2+i*sweep, a1=a0+sweep-0.04
+      const x0=CX+r_inner*Math.cos(a0), y0=CY+r_inner*Math.sin(a0)
+      const x1=CX+r_outer*Math.cos(a0), y1=CY+r_outer*Math.sin(a0)
+      const x2=CX+r_outer*Math.cos(a1), y2=CY+r_outer*Math.sin(a1)
+      const x3=CX+r_inner*Math.cos(a1), y3=CY+r_inner*Math.sin(a1)
+      const path=`M${x0},${y0} L${x1},${y1} A${r_outer},${r_outer},0,0,1,${x2},${y2} L${x3},${y3} A${r_inner},${r_inner},0,0,0,${x0},${y0}`
+      const on=bitsInRing[i]
+      svg.appendChild(makeSVGEl('path',{
+        d:path,
+        fill: on ? d.color : '#12122a',
+        opacity: on ? (.35+ring*.08) : .6,
+        stroke: '#0d0d20','stroke-width':.4
+      }))
+    }
+  }
+
+  // spoke lines (6 spokes)
+  for(let s=0;s<6;s++){
+    const ang=-Math.PI/2+s*Math.PI/3
+    const x1=CX+12*Math.cos(ang), y1=CY+12*Math.sin(ang)
+    const x2=CX+82*Math.cos(ang), y2=CY+82*Math.sin(ang)
+    svg.appendChild(makeSVGEl('line',{
+      x1,y1,x2,y2,
+      stroke: s===d.spoke ? d.color : '#1a1a30',
+      'stroke-width': s===d.spoke ? 1.2 : .4,
+      opacity: s===d.spoke ? .9 : .3
+    }))
+  }
+
+  // golden ratio spiral guide (decorative)
+  let pts=[], gr=1.618, rr=4
+  for(let t=0;t<4*Math.PI;t+=.2){
+    rr*=Math.pow(gr,0.2/(2*Math.PI))
+    if(rr>82)break
+    pts.push(`${(CX+rr*Math.cos(t)).toFixed(1)},${(CY+rr*Math.sin(t)).toFixed(1)}`)
+  }
+  if(pts.length>2)
+    svg.appendChild(makeSVGEl('polyline',{
+      points:pts.join(' '),fill:'none',stroke:d.color,'stroke-width':.4,opacity:.12
+    }))
+
+  // center shape
+  addShape(svg, d.shape, d.color, CX, CY, 8)
+  // inner ring
+  svg.appendChild(makeSVGEl('circle',{cx:CX,cy:CY,r:11,fill:'none',stroke:d.color,'stroke-width':.8,opacity:.6}))
+
+  card.appendChild(svg)
+
+  const b62l=document.createElement('div'); b62l.className='c-b62'; b62l.style.fontSize='11px'
+  b62l.textContent=b62enc(addr); card.appendChild(b62l)
+  const hl=document.createElement('div'); hl.className='c-hex'
+  hl.textContent='0x'+toHex(addr); card.appendChild(hl)
+
+  const mt=document.createElement('div'); mt.className='c-meta'
+  mt.innerHTML=`<span class=k>spoke</span><span class=v style="color:${d.color}">${d.spoke}</span>
+    <span class=k>world</span><span class=v style="color:${d.color}">${d.wlbl}</span>
+    <span class=k>slot</span><span class=v>${d.slot}</span>
+    <span class=k>layer</span><span class=v>${d.layer}</span>`
+  card.appendChild(mt)
+  return card
+}
+
+// ── BLUEPRINT SCROLL MODE ─────────────────────────────────────────────
+function renderBlueprint(c){
+  const now=new Date().toISOString().slice(0,19).replace('T',' ')
+  const page=document.createElement('div')
+  page.className='blueprint-page'
+  ;['tl','tr','bl','br'].forEach(pos=>{
+    const cc=document.createElement('div'); cc.className=`bp-corner ${pos}`; page.appendChild(cc)
+  })
+
+  const hdr=document.createElement('div'); hdr.className='bp-header'
+  hdr.innerHTML=`<span class="bp-title">POGLS · BLUEPRINT SCROLL</span>
+    <span class="bp-stamp">${now} · ${addrs.length} addr · v2</span>`
+  page.appendChild(hdr)
+
+  // scrollbar line
+  const scroll=document.createElement('div'); scroll.className='scroll-canvas'
+
+  addrs.forEach((addr,i)=>{
+    const d=decompose(addr)
+    const row=document.createElement('div')
+    row.style.cssText='display:flex;align-items:stretch;gap:12px;padding:8px 0;border-bottom:1px solid #0e1428'
+
+    // index
+    const idx=document.createElement('div')
+    idx.style.cssText=`width:20px;font-size:9px;color:#2a3a5a;padding-top:2px;flex-shrink:0`
+    idx.textContent=String(i).padStart(2,'0'); row.appendChild(idx)
+
+    // mini grid 8×8 (10px cells)
+    const mg=document.createElement('div')
+    mg.style.cssText='display:grid;grid-template-columns:repeat(8,10px);grid-template-rows:repeat(8,10px);gap:1px;flex-shrink:0'
+    d.bits.forEach(b=>{
+      const mc=document.createElement('div')
+      mc.style.cssText=`background:${b?d.color:'#0e0e20'};opacity:${b?.9:.5}`
+      mg.appendChild(mc)
+    }); row.appendChild(mg)
+
+    // mini radial (60px svg)
+    const msvg=makeSVG(60,60)
+    msvg.style.flexShrink='0'
+    const MCX=30,MCY=30
+    msvg.appendChild(makeSVGEl('circle',{cx:MCX,cy:MCY,r:28,fill:'#080814',stroke:d.color,'stroke-width':.5,opacity:.2}))
+    for(let ring=0;ring<8;ring++){
+      const ri=4+ring*3, ro=4+ring*3+2.5
+      const bits=d.bits.slice(ring*8,(ring+1)*8)
+      for(let i=0;i<8;i++){
+        if(!bits[i])continue
+        const a0=-Math.PI/2+i*Math.PI/4, a1=a0+Math.PI/4-.05
+        const p=`M${MCX+ri*Math.cos(a0)},${MCY+ri*Math.sin(a0)} L${MCX+ro*Math.cos(a0)},${MCY+ro*Math.sin(a0)} A${ro},${ro},0,0,1,${MCX+ro*Math.cos(a1)},${MCY+ro*Math.sin(a1)} L${MCX+ri*Math.cos(a1)},${MCY+ri*Math.sin(a1)} A${ri},${ri},0,0,0,${MCX+ri*Math.cos(a0)},${MCY+ri*Math.sin(a0)}`
+        msvg.appendChild(makeSVGEl('path',{d:p,fill:d.color,opacity:.5+ring*.04}))
+      }
+    }
+    addShape(msvg,d.shape,d.color,MCX,MCY,4)
+    row.appendChild(msvg)
+
+    // text block
+    const txt=document.createElement('div')
+    txt.style.cssText='flex:1;display:flex;flex-direction:column;justify-content:center;gap:3px'
+    txt.innerHTML=`
+      <div style="font-size:13px;letter-spacing:.1em;color:#8ab4f8">${b62enc(addr)}</div>
+      <div style="font-size:8px;color:#2a3a5a">0x${toHex(addr)}</div>
+      <div style="font-size:8px;color:#3a4a6a">
+        spoke <span style="color:${d.color}">${d.spoke}</span> · 
+        world <span style="color:${d.color}">${d.wlbl}</span> · 
+        slot ${d.slot} · layer ${d.layer}
+      </div>`
+    row.appendChild(txt)
+
+    // spoke bar on right
+    const sb=document.createElement('div')
+    sb.style.cssText=`width:3px;background:${d.color};opacity:.5;border-radius:2px;flex-shrink:0`
+    row.appendChild(sb)
+
+    scroll.appendChild(row)
+  })
+
+  page.appendChild(scroll)
+  c.appendChild(page)
+}
+
+// ── DECODE (live b62) ─────────────────────────────────────────────────
+function liveDecodeB62(inp){
+  const s=inp.value.trim()
+  const out=document.getElementById('decOut')
+  if(s.length!==11){out.classList.remove('vis');return}
+  try{
+    const addr=b62dec(s)
+    const d=decompose(addr)
+    out.classList.add('vis')
+    out.innerHTML=`
+      <div class="decode-row"><span class=dk>uint64</span><span class=dv>${addr}</span></div>
+      <div class="decode-row"><span class=dk>hex</span><span class=dv>0x${toHex(addr)}</span></div>
+      <div class="decode-row"><span class=dk>spoke</span><span class=dv style="color:${d.color}">${d.spoke}</span></div>
+      <div class="decode-row"><span class=dk>world</span><span class=dv style="color:${d.color}">${d.wlbl}</span></div>
+      <div class="decode-row"><span class=dk>slot</span><span class=dv>${d.slot}</span></div>
+      <div class="decode-row"><span class=dk>layer</span><span class=dv>${d.layer}</span></div>
+      <div class="decode-row"><span class=dk>intens</span><span class=dv>${d.intens}/255</span></div>
+      <div class="decode-row"><span class=dk>valid</span><span class=dv style="color:#2ECC71">✓ lossless</span></div>
+    `
+    // add to canvas if not already there
+    document.getElementById('addrIn').value=s
+  }catch{out.classList.remove('vis')}
+}
+
+// ── SVG HELPERS ───────────────────────────────────────────────────────
+function makeSVG(w,h){
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg')
+  s.setAttribute('width',w); s.setAttribute('height',h)
+  s.setAttribute('viewBox',`0 0 ${w} ${h}`)
+  return s
+}
+function makeSVGEl(tag,attrs){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag)
+  Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v))
+  return el
+}
+function addShape(svg,shape,color,cx,cy,r){
+  let el
+  if(shape==='circle') el=makeSVGEl('circle',{cx,cy,r,fill:color,opacity:.9})
+  else if(shape==='triangle'){
+    el=makeSVGEl('polygon',{
+      points:`${cx},${cy-r} ${cx-r*.86},${cy+r*.5} ${cx+r*.86},${cy+r*.5}`,
+      fill:color,opacity:.9
+    })
+  } else {
+    el=makeSVGEl('rect',{x:cx-r,y:cy-r,width:r*2,height:r*2,fill:color,opacity:.9})
+  }
+  svg.appendChild(el)
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────
+function exportAll(){
+  const c=document.getElementById('canvas')
+  const s=new XMLSerializer()
+  const svgs=c.querySelectorAll('svg')
+  if(!svgs.length){alert('no SVG cards to export');return}
+  // combine all SVGs into one
+  const totalW=Math.max(...[...svgs].map(s=>+s.getAttribute('width')||0))
+  let totalH=0, parts=[]
+  svgs.forEach(sv=>{
+    parts.push({svg:s.serializeToString(sv),y:totalH})
+    totalH+=(+sv.getAttribute('height')||0)+16
+  })
+  const out=`<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" style="background:#07070f">`
+    +parts.map(p=>`<g transform="translate(0,${p.y})">${p.svg}</g>`).join('')
+    +'</svg>'
+  const a=document.createElement('a')
+  a.href=URL.createObjectURL(new Blob([out],{type:'image/svg+xml'}))
+  a.download='pogls_paperwallet_v2.svg'; a.click()
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadPreset('sacred')
+</script>
+</body>
+</html>

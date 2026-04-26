@@ -27,8 +27,7 @@ typedef struct {
 
 static inline void kv_init(GeoKV *kv) { memset(kv, 0, sizeof(*kv)); }
 
-/* Returns 1 = inserted/updated, 0 = probe exhausted (table full) */
-static inline int kv_put(GeoKV *kv, uint64_t key, uint64_t val) {
+static inline void kv_put(GeoKV *kv, uint64_t key, uint64_t val) {
     uint32_t h = (uint32_t)(key & (KV_CAP - 1));
     for (uint32_t i = 0; i < MAX_PROBE; i++) {
         uint32_t idx = (h + i) & (KV_CAP - 1);
@@ -39,10 +38,9 @@ static inline int kv_put(GeoKV *kv, uint64_t key, uint64_t val) {
             kv->slots[idx] = (KVSlot){key, val};
             kv->puts++;
             if (i > kv->max_probe) kv->max_probe = i;
-            return 1;
+            return;
         }
     }
-    return 0;  /* probe exhausted — caller must handle */
 }
 
 static inline uint64_t kv_get(GeoKV *kv, uint64_t key) {

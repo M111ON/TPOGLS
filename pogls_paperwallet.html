@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POGLS Paperwallet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap');
+
+  :root {
+    --bg:       #080810;
+    --surface:  #0e0e1a;
+    --border:   #1e1e3a;
+    --dim:      #2a2a4a;
+    --muted:    #4a4a7a;
+    --text:     #c8c8e8;
+    --bright:   #e8e8ff;
+    --mono:     'Share Tech Mono', monospace;
+    --serif:    'Cinzel', serif;
+    --cell:     22px;
+    --gap:      2px;
+    --card-pad: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ── header ── */
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    font-family: var(--serif);
+    font-size: 18px;
+    letter-spacing: .2em;
+    color: var(--bright);
+  }
+  .header .spec {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+
+  /* ── input bar ── */
+  .input-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .input-bar input {
+    flex: 1;
+    min-width: 180px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--bright);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .input-bar input:focus { border-color: var(--muted); }
+  .input-bar input::placeholder { color: var(--dim); }
+  .btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 16px;
+    cursor: pointer;
+    letter-spacing: .06em;
+    transition: border-color .15s, color .15s;
+  }
+  .btn:hover { border-color: var(--muted); color: var(--bright); }
+  .btn.primary { border-color: var(--muted); color: var(--bright); }
+
+  /* ── card grid ── */
+  .card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  /* ── single card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: var(--card-pad);
+    display: inline-flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--muted); }
+
+  /* spoke-color accent bar top */
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--spoke-color, #444);
+    opacity: .7;
+  }
+
+  /* ── 8×8 grid ── */
+  .grid-wrap {
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell));
+    grid-template-rows:    repeat(8, var(--cell));
+    gap: var(--gap);
+    position: relative;
+  }
+  .cell {
+    width: var(--cell);
+    height: var(--cell);
+    background: #12122a;
+    transition: background .1s;
+  }
+  .cell.on { background: #ddddf0; }
+
+  /* row labels */
+  .row-label {
+    position: absolute;
+    left: calc(-1 * (var(--cell) + 4px));
+    font-size: 7px;
+    color: var(--dim);
+    line-height: var(--cell);
+    width: var(--cell);
+    text-align: right;
+  }
+
+  /* ── overlay dot ── */
+  .overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .overlay-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--spoke-color, #444);
+    opacity: .3;
+    pointer-events: none;
+  }
+
+  /* ── intensity bar ── */
+  .intensity-track {
+    height: 3px;
+    background: var(--dim);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .intensity-fill {
+    height: 100%;
+    background: var(--spoke-color, #444);
+    border-radius: 2px;
+  }
+
+  /* ── meta labels ── */
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+  .meta .val { color: var(--text); }
+  .meta .pill {
+    display: inline-block;
+    border: 1px solid currentColor;
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 7px;
+    letter-spacing: .06em;
+  }
+
+  .b62-label {
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--bright);
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    word-break: break-all;
+  }
+
+  .hex-label {
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: .06em;
+  }
+
+  /* ── print layout ── */
+  .print-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .divider-label {
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: .1em;
+    margin-left: 8px;
+  }
+
+  /* cut guides */
+  .cut-hint {
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: .06em;
+    margin-top: 20px;
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { background: #fff; color: #000; padding: 12px; }
+    .input-bar, .print-controls { display: none; }
+    .card { border-color: #ccc; background: #fff; break-inside: avoid; }
+    .cell { background: #eee; }
+    .cell.on { background: #111; }
+    .b62-label { color: #000; }
+    .hex-label, .meta { color: #555; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>POGLS · PAPERWALLET</h1>
+  <span class="spec">addr=uint64 · b62=11ch · grid=8×8 lossless · v1</span>
+</div>
+
+<div class="print-controls">
+  <button class="btn primary" onclick="window.print()">⎙ PRINT</button>
+  <button class="btn" onclick="exportSVG()">↓ SVG</button>
+  <span class="divider-label">PRESET:</span>
+  <button class="btn" onclick="loadPreset('sacred')">sacred numbers</button>
+  <button class="btn" onclick="loadPreset('worlds')">world boundaries</button>
+  <button class="btn" onclick="loadPreset('random')">random ×8</button>
+</div>
+
+<div class="input-bar">
+  <input id="addrInput" type="text" placeholder="enter uint64 addr  e.g. 54  or  0xDEADBEEF  or  b62: 0000000000s" />
+  <button class="btn primary" onclick="addFromInput()">ADD CARD</button>
+  <button class="btn" onclick="clearAll()">CLEAR</button>
+</div>
+
+<div id="cardGrid" class="card-grid"></div>
+
+<div class="cut-hint">
+  <span>↑ fold / cut along edges · each card encodes 1 uint64 losslessly</span>
+  <span>POGLS · deterministic · geometry-native · base62 case-sensitive</span>
+</div>
+
+<script>
+// ── POGLS codec (inline — no deps) ───────────────────────────────────
+const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+const BASE = 62n
+const B62_LEN = 11
+const DEC = Object.fromEntries([...ALPHABET].map((c,i) => [c, BigInt(i)]))
+const UINT64_MAX = (1n << 64n) - 1n
+
+function encodeB62(addr) {
+  let n = BigInt(addr)
+  const out = []
+  for (let i = 0; i < B62_LEN; i++) {
+    out.push(ALPHABET[Number(n % BASE)])
+    n /= BASE
+  }
+  return out.reverse().join('')
+}
+
+function decodeB62(s) {
+  if (s.length !== B62_LEN) throw new Error(`expected ${B62_LEN} chars`)
+  let n = 0n
+  for (const c of s) {
+    if (DEC[c] === undefined) throw new Error(`invalid char: ${c}`)
+    n = n * BASE + DEC[c]
+  }
+  return n
+}
+
+function toHex(addr) {
+  return BigInt(addr).toString(16).toUpperCase().padStart(16, '0')
+}
+
+// ── decompose ────────────────────────────────────────────────────────
+const SPOKE_COLORS = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#3498DB','#9B59B6']
+const WORLD_LABEL  = ['4n','5n','6n']
+const WORLD_SHAPE  = ['circle','triangle','square']
+
+function decompose(addr) {
+  const a = BigInt(addr)
+  const spoke     = Number(a % 6n)
+  const slot      = Number((a >> 6n) % 27n)
+  const world     = Number((a >> 11n) % 3n)
+  const layer     = Number((a >> 13n) % 4n)
+  const intensity = slot > 0 ? Math.round((slot / 26) * 255) : 0
+  const bits = []
+  for (let i = 63; i >= 0; i--) bits.push(Number((a >> BigInt(i)) & 1n))
+  return { addr: a, spoke, slot, world, layer, intensity, bits }
+}
+
+// ── parse input ──────────────────────────────────────────────────────
+function parseAddr(raw) {
+  const s = raw.trim()
+  if (!s) throw new Error('empty')
+  if (/^0x/i.test(s))   return BigInt(s)
+  if (/^\d+$/.test(s))  return BigInt(s)
+  if (s.length === 11)  return decodeB62(s)
+  if (/^[0-9a-fA-F]{16}$/.test(s)) return BigInt('0x' + s)
+  throw new Error(`cannot parse: ${s}`)
+}
+
+// ── render card ──────────────────────────────────────────────────────
+function makeCard(addr) {
+  const d       = decompose(addr)
+  const b62     = encodeB62(addr)
+  const hex     = toHex(addr)
+  const color   = SPOKE_COLORS[d.spoke]
+  const wlabel  = WORLD_LABEL[d.world]
+  const shape   = WORLD_SHAPE[d.world]
+  const intPct  = (d.intensity / 255 * 100).toFixed(0)
+
+  const card = document.createElement('div')
+  card.className = 'card'
+  card.style.setProperty('--spoke-color', color)
+
+  // 8×8 grid
+  const gridWrap = document.createElement('div')
+  gridWrap.className = 'grid-wrap'
+  gridWrap.style.marginLeft = '20px'  // room for row labels
+
+  for (let row = 0; row < 8; row++) {
+    // row label (bit range)
+    const rl = document.createElement('span')
+    rl.className = 'row-label'
+    rl.style.top = `${row * (22 + 2)}px`
+    rl.textContent = 63 - row * 8
+    gridWrap.appendChild(rl)
+
+    for (let col = 0; col < 8; col++) {
+      const cell = document.createElement('div')
+      cell.className = 'cell' + (d.bits[row * 8 + col] ? ' on' : '')
+      gridWrap.appendChild(cell)
+    }
+  }
+
+  // overlay shape (center of grid)
+  const ring = document.createElement('div')
+  ring.className = 'overlay-ring'
+  gridWrap.appendChild(ring)
+
+  const ov = document.createElement('div')
+  ov.className = 'overlay'
+  const svgNS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(svgNS, 'svg')
+  svg.setAttribute('width', '14'); svg.setAttribute('height', '14')
+  svg.setAttribute('viewBox', '-7 -7 14 14')
+  let sh
+  if (shape === 'circle') {
+    sh = document.createElementNS(svgNS, 'circle')
+    sh.setAttribute('r', '5')
+  } else if (shape === 'triangle') {
+    sh = document.createElementNS(svgNS, 'polygon')
+    sh.setAttribute('points', '0,-6 -5,4 5,4')
+  } else {
+    sh = document.createElementNS(svgNS, 'rect')
+    sh.setAttribute('x','-5'); sh.setAttribute('y','-5')
+    sh.setAttribute('width','10'); sh.setAttribute('height','10')
+  }
+  sh.setAttribute('fill', color)
+  sh.setAttribute('opacity', '0.85')
+  svg.appendChild(sh)
+  ov.appendChild(svg)
+  gridWrap.appendChild(ov)
+
+  // intensity bar
+  const track = document.createElement('div')
+  track.className = 'intensity-track'
+  const fill = document.createElement('div')
+  fill.className = 'intensity-fill'
+  fill.style.width = intPct + '%'
+  track.appendChild(fill)
+
+  // meta
+  const meta = document.createElement('div')
+  meta.className = 'meta'
+  meta.innerHTML = `
+    <span>spoke</span><span class="val">${d.spoke} <span class="pill" style="color:${color}">${['▸','▸','▸','▸','▸','▸'][d.spoke]} S${d.spoke}</span></span>
+    <span>world</span><span class="val"><span class="pill" style="color:${color}">${wlabel}</span></span>
+    <span>slot</span><span class="val">${d.slot}</span>
+    <span>layer</span><span class="val">${d.layer}</span>
+    <span>intensity</span><span class="val">${d.intensity} / 255</span>
+    <span>int%</span><span class="val">${intPct}%</span>
+  `
+
+  // b62 + hex
+  const b62label = document.createElement('div')
+  b62label.className = 'b62-label'
+  b62label.textContent = b62
+
+  const hexlabel = document.createElement('div')
+  hexlabel.className = 'hex-label'
+  hexlabel.textContent = '0x' + hex
+
+  card.appendChild(gridWrap)
+  card.appendChild(track)
+  card.appendChild(meta)
+  card.appendChild(b62label)
+  card.appendChild(hexlabel)
+
+  return card
+}
+
+// ── state ─────────────────────────────────────────────────────────────
+let cards = []
+
+function renderAll() {
+  const grid = document.getElementById('cardGrid')
+  grid.innerHTML = ''
+  cards.forEach(addr => grid.appendChild(makeCard(addr)))
+}
+
+function addAddr(addr) {
+  cards.push(addr)
+  renderAll()
+}
+
+function addFromInput() {
+  const input = document.getElementById('addrInput')
+  try {
+    const addr = parseAddr(input.value)
+    addAddr(addr)
+    input.value = ''
+    input.style.borderColor = ''
+  } catch(e) {
+    input.style.borderColor = '#E74C3C'
+    setTimeout(() => input.style.borderColor = '', 1200)
+  }
+}
+
+function clearAll() { cards = []; renderAll() }
+
+// ── presets ───────────────────────────────────────────────────────────
+const PRESETS = {
+  sacred: [0n, 1n, 54n, 162n, 648n, 640n, 654n, 2562n],
+  worlds: [
+    0n,
+    BigInt('0x0000000000000800'),  // world boundary 5n
+    BigInt('0x0000000000001000'),  // world boundary 6n
+    162n, 54n, 648n,
+    (1n << 32n),
+    (1n << 63n),
+  ],
+  random: Array.from({length: 8}, () => BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER))),
+}
+
+function loadPreset(name) {
+  cards = PRESETS[name] || []
+  if (name === 'random') {
+    PRESETS.random = Array.from({length: 8}, () =>
+      BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)))
+    cards = PRESETS.random
+  }
+  renderAll()
+}
+
+// ── SVG export ────────────────────────────────────────────────────────
+function exportSVG() {
+  const grid = document.getElementById('cardGrid')
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg"
+    width="${grid.scrollWidth}" height="${grid.scrollHeight}">
+    <foreignObject width="100%" height="100%">
+      <div xmlns="http://www.w3.org/1999/xhtml">${grid.outerHTML}</div>
+    </foreignObject></svg>`
+  const blob = new Blob([svgContent], {type:'image/svg+xml'})
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'pogls_paperwallet.svg'
+  a.click()
+}
+
+// ── enter key ────────────────────────────────────────────────────────
+document.getElementById('addrInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addFromInput()
+})
+
+// ── init ──────────────────────────────────────────────────────────────
+loadPreset('sacred')
+</script>
+</body>
+</html>

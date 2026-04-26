@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POGLS Storage & Streaming System - Project Context</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        header {
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 8px 8px 0 0;
+        }
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        header .status {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .content {
+            padding: 40px;
+        }
+        section {
+            margin-bottom: 40px;
+        }
+        section h2 {
+            color: #1a365d;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+        .description {
+            font-size: 1.1em;
+            color: #4a5568;
+        }
+        .flow-diagram {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+        }
+        .target-box {
+            background: #ebf8ff;
+            border: 1px solid #4299e1;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .target-box h4 {
+            color: #2b6cb0;
+            margin-bottom: 10px;
+        }
+        .target-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #1a365d;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+        .deliverable {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .existing {
+            color: #2f855a;
+            background: #c6f6d5;
+        }
+        .required {
+            color: #c05621;
+            background: #feebc8;
+        }
+        .criteria-list {
+            list-style: none;
+            padding: 0;
+        }
+        .criteria-list li {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background: #f7fafc;
+            border-radius: 6px;
+            border-left: 4px solid #4299e1;
+        }
+        .criteria-list li strong {
+            color: #1a365d;
+        }
+        .session-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #1a365d;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .section-badge {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #4a5568;
+        }
+        .files-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .file-card {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .file-card code {
+            display: block;
+            background: #1a365d;
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        .file-card p {
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+        .rules-list {
+            list-style: none;
+            padding: 0;
+        }
+        .rules-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .rules-list li::before {
+            content: "🚫 ";
+        }
+        footer {
+            background: #f7fafc;
+            padding: 20px 40px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #718096;
+            font-size: 0.9em;
+            border-radius: 0 0 8px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>POGLS Storage & Streaming System</h1>
+            <span class="status">Status: Planning | Date: 2026-04-07</span>
+        </header>
+        
+        <div class="content">
+            <section>
+                <h2>Overview</h2>
+                <p class="description">
+                    A file and model weights storage system with compression and streaming capabilities designed for LLM inference.
+                    Converts files to coordinate sets for efficient storage and enables partial reconstruction for streaming use cases.
+                </p>
+            </section>
+
+            <section>
+                <h2>Pipeline Flow</h2>
+                <div class="flow-diagram">
+File / Model weights
+       ↓
+[Section 1: File Scanner] → chunk → coordinate
+       ↓
+[Section 2: Compression Layer]
+       ↓
+[Section 3: POGLS Storage] ← Existing system
+       ↓
+[Section 4: Reconstruct + Stream]
+       ↓
+[Section 5: LLM Streaming]</div>
+            </section>
+
+            <section>
+                <h2>Section Breakdown</h2>
+                
+                <h3 style="color: #2d3748; margin-top: 25px;">Section 1: File Scanner</h3>
+                <p>Converts files to coordinate sets instead of storing content directly.</p>
+                <table>
+                    <tr><th>File</th><th>Role</th></tr>
+                    <tr><td><span class="deliverable">pogls_scanner.h</span></td><td>Scan file → chunk → coordinate</td></tr>
+                    <tr><td><span class="deliverable">pogls_file_index.h</span></td><td>Store metadata (name, size, type, chunk map)</td></tr>
+                </table>
+                <p style="margin-top: 15px;"><strong>Rules:</strong> Skip compressed files (.zip, .jpg, .mp4), chunk size = 64B (DiamondBlock), index stored separately from data.</p>
+
+                <h3 style="color: #2d3748; margin-top: 25px;">Section 2: Compression Layer</h3>
+                <p>Reduces coordinate data size while maintaining reconstructability.</p>
+                <table>
+                    <tr><th>File</th><th>Role</th></tr>
+                    <tr><td><span class="deliverable">pogls_compress.h</span></td><td>Compressor / decompressor</td></tr>
+                    <tr><td><span class="deliverable">pogls_chunk_index.h</span></td><td>Random access index</td></tr>
+                </table>
+                <p style="margin-top: 15px;"><strong>Strategies:</strong> Delta encode, PHI symbol table, Run-length encode, QRPN guard per chunk.</p>
+                <div class="target-box">
+                    <h4>Target</h4>
+                    <ul>
+                        <li>Structured data (text, code, weights) → 60-90% reduction</li>
+                        <li>Compressed data (.zip, .jpg) → Skip, store as-is</li>
+                    </ul>
+                </div>
+
+                <h3 style="color: #2d3748; margin-top: 25px;">Section 3: POGLS Storage</h3>
+                <p><span class="deliverable existing">EXISTING - Do not modify</span></p>
+                <p>Uses: pogls_compress.h → pogls_delta (store), FiftyFourBridge (index), Federation (commit), libpogls_v4.so (API)</p>
+
+                <h3 style="color: #2d3748; margin-top: 25px;">Section 4: Reconstruct + Stream</h3>
+                <p>Retrieve data completely or partially for streaming use cases.</p>
+                <table>
+                    <tr><th>File</th><th>Role</th></tr>
+                    <tr><td><span class="deliverable">pogls_reconstruct.h</span></td><td>Reconstruct pipeline</td></tr>
+                    <tr><td><span class="deliverable">pogls_stream.h</span></td><td>Partial / streaming output</td></tr>
+                </table>
+                <p style="margin-top: 15px;"><strong>Partial reconstruct:</strong> Video/audio playback before full load, large file preview, LLM layer-by-layer loading.</p>
+
+                <h3 style="color: #2d3748; margin-top: 25px;">Section 5: LLM Weight Streaming</h3>
+                <p>Inference without loading entire model into RAM.</p>
+                <table>
+                    <tr><th>File</th><th>Role</th></tr>
+                    <tr><td><span class="deliverable">pogls_model_index.h</span></td><td>Map layer → chunk list</td></tr>
+                    <tr><td><span class="deliverable">pogls_weight_stream.h</span></td><td>Stream weights per layer</td></tr>
+                </table>
+                <div class="target-box">
+                    <h4>Target</h4>
+                    <ul>
+                        <li>Model 7B (14GB) → Actual RAM usage &lt; 2GB</li>
+                        <li>Latency per layer → &lt; 100ms (NVMe SSD)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>Key Source Files</h2>
+                <div class="files-list">
+                    <div class="file-card">
+                        <code>pogls_scanner.h</code>
+                        <p>File scanner - converts files to coordinate sets</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_compress.h</code>
+                        <p>Compression/decompression with delta, PHI table, RLE</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_chunk_index.h</code>
+                        <p>Random access index for chunks</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_file_index.h</code>
+                        <p>File metadata storage (name, size, type, chunk map)</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_reconstruct.h</code>
+                        <p>Full and partial reconstruction pipeline</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_stream.h</code>
+                        <p>Streaming output for partial reads</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_model_index.h</code>
+                        <p>Model layer to chunk mapping</p>
+                    </div>
+                    <div class="file-card">
+                        <code>pogls_weight_stream.h</code>
+                        <p>Per-layer weight streaming for LLM inference</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Build Order / Session Plan</h2>
+                <table>
+                    <tr><th>Session</th><th>Section</th><th>Deliverable</th></tr>
+                    <tr><td>S1</td><td><span class="section-badge">2: Compress</span></td><td>pogls_compress.h + round-trip test</td></tr>
+                    <tr><td>S2</td><td><span class="section-badge">2: Index</span></td><td>pogls_chunk_index.h + random access test</td></tr>
+                    <tr><td>S3</td><td><span class="section-badge">1: Scanner</span></td><td>pogls_scanner.h + file type filter</td></tr>
+                    <tr><td>S4</td><td><span class="section-badge">1: File index</span></td><td>pogls_file_index.h + end-to-end store test</td></tr>
+                    <tr><td>S5</td><td><span class="section-badge">4: Reconstruct</span></td><td>pogls_reconstruct.h + full reconstruct test</td></tr>
+                    <tr><td>S6</td><td><span class="section-badge">4: Stream</span></td><td>pogls_stream.h + partial output test</td></tr>
+                    <tr><td>S7</td><td><span class="section-badge">5: Model index</span></td><td>pogls_model_index.h + layer map test</td></tr>
+                    <tr><td>S8</td><td><span class="section-badge">5: Weight stream</span></td><td>pogls_weight_stream.h + inference test</td></tr>
+                </table>
+            </section>
+
+            <section>
+                <h2>Frozen Rules</h2>
+                <ul class="rules-list">
+                    <li>PHI constants from pogls_platform.h only</li>
+                    <li>DiamondBlock 64B format - no changes</li>
+                    <li>QRPN verify every chunk before output</li>
+                    <li>GPU - do not modify commit path</li>
+                    <li>Integer only - no float</li>
+                    <li>core_c/ - do not modify</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Success Criteria</h2>
+                <ul class="criteria-list">
+                    <li><strong>Full Reconstruction:</strong> Text/code/weights files compress and reconstruct 100%</li>
+                    <li><strong>Partial Streaming:</strong> Chunk 1 available before chunk N arrives</li>
+                    <li><strong>LLM Inference:</strong> 7B model runs with &lt; 2GB RAM</li>
+                    <li><strong>No Regression:</strong> All existing tests pass (2000+ cases)</li>
+                </ul>
+            </section>
+        </div>
+        
+        <footer>
+            Project Context Reference | Last Updated: 2026-04-07
+        </footer>
+    </div>
+</body>
+</html>
