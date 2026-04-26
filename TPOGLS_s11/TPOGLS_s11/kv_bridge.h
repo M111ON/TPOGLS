@@ -57,9 +57,7 @@ typedef struct {
     GeoKV   cpu;                                  /* truth — always valid */
     KVBLane lanes[KVB_LANES];                     /* GPU work queues     */
     uint32_t flush_count;                         /* total GPU flushes   */
-    uint32_t dropped;                             /* ring-full drops (GPU miss, monitor) */
-    uint32_t cpu_fail;                            /* S32-fix: CPU kv_put probe-exhausted */
-    uint32_t rehash_retry;                        /* S32-fix: retry succeeded after rehash */
+    uint32_t dropped;                             /* ring-full drops (monitor) */
 } KVBridge;
 
 /* ── Init ────────────────────────────────────────────────────────── */
@@ -87,29 +85,16 @@ static inline int kvb_enqueue(KVBridge *b, uint64_t key, uint64_t val) {
     return 1;
 }
 
-/* ── CPU put with load guard + retry-after-rehash ────────────────── */
+/* ── CPU put with load guard ─────────────────────────────────────── */
 /*
- * 3-state deterministic behavior (S32-fix):
- *   tombstone-heavy  → rehash compacts → retry succeeds
- *   load near limit  → rehash rebalances → retry succeeds
- *   table truly full → retry still fails → cpu_fail++ (visible, not silent)
+ * CPU write = truth. Always succeeds (rehash if needed).
  * GPU enqueue is best-effort (drop OK — GPU is throughput only).
  */
 static inline void kvbridge_put(KVBridge *b, uint64_t key, uint64_t val) {
-    /* pre-put load guard */
+    /* load guard: rehash before table saturates */
     if (b->cpu.count >= KVB_MAX_LOAD || kvr_needs_rehash(&b->cpu))
         kv_rehash(&b->cpu);
-
-    if (!kv_put(&b->cpu, key, val)) {
-        /* first fail: compact once and retry */
-        kv_rehash(&b->cpu);
-        if (kv_put(&b->cpu, key, val)) {
-            b->rehash_retry++;              /* tombstone case — rescued */
-        } else {
-            b->cpu_fail++;                  /* table truly full — explicit signal */
-        }
-    }
-
+    kv_put(&b->cpu, key, val);
     if (!kvb_enqueue(b, key, val)) b->dropped++;
 }
 
@@ -161,10 +146,8 @@ static inline uint32_t kvbridge_flush(KVBridge *b,
 
 /* ── Stats ───────────────────────────────────────────────────────── */
 static inline void kvbridge_stats(const KVBridge *b) {
-    printf("[KVBridge] cpu.count=%u tomb=%u flushes=%u dropped=%u"
-           " cpu_fail=%u rehash_retry=%u\n",
-           b->cpu.count, b->cpu.tombstones, b->flush_count, b->dropped,
-           b->cpu_fail, b->rehash_retry);
+    printf("[KVBridge] cpu.count=%u tomb=%u flushes=%u dropped=%u\n",
+           b->cpu.count, b->cpu.tombstones, b->flush_count, b->dropped);
 }
 
 #endif /* KV_BRIDGE_H */
